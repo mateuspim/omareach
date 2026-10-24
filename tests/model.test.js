@@ -87,6 +87,33 @@ const tests = {
     assert.equal(Model.rowCells(9, 3, 8), 3)
     assert.equal(Model.rowCells(1, 4, 0), 1)
   },
+  "gridRows splits cells into rows with the rest last"() {
+    assert.deepEqual([...Model.gridRows(7, 4)], [4, 3])
+    assert.deepEqual([...Model.gridRows(6, 3)], [3, 3])
+    assert.deepEqual([...Model.gridRows(0, 3)], [])
+  },
+  "gridMove walks the page's rows and lands under the middle"() {
+    // Fills four then three, Shown on two, one button.
+    const rows = [4, 3, 2, 1]
+    assert.equal(Model.gridMove(rows, 0, 1, 0), 1)
+    // Stops at the ends of a row instead of wrapping into the next.
+    assert.equal(Model.gridMove(rows, 3, 1, 0), 3)
+    assert.equal(Model.gridMove(rows, 4, -1, 0), 4)
+    // Down from the last of four lands on the last of three; from the
+    // first on the first.
+    assert.equal(Model.gridMove(rows, 3, 0, 1), 6)
+    assert.equal(Model.gridMove(rows, 0, 0, 1), 4)
+    // Into a row of one, and back up to its middle.
+    assert.equal(Model.gridMove(rows, 7, 0, 1), 9)
+    assert.equal(Model.gridMove(rows, 9, 0, -1), 8)
+    // Stops at the top and the bottom.
+    assert.equal(Model.gridMove(rows, 1, 0, -1), 1)
+    assert.equal(Model.gridMove(rows, 9, 0, 1), 9)
+    // Off the grid: the first cell, or the last after cells went away.
+    assert.equal(Model.gridMove(rows, -1, 0, 1), 0)
+    assert.equal(Model.gridMove(rows, 12, 0, 1), 9)
+    assert.equal(Model.gridMove([], 0, 0, 1), -1)
+  },
   "the panel list counts in same and isDefault"() {
     assert.ok(!Model.same(Model.normalize({ panels: ["gpu"] }), Model.normalize({})))
     assert.ok(Model.same(Model.normalize({ panels: ["gpu", "cpu", "memory", "network"] }), Model.normalize({})))

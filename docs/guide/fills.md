@@ -30,7 +30,8 @@ Omarchy logo, a clock or the stats dashboard, and black when idle.
   goes black, except the stats dashboard, which stays up beside a game.
 - **Stats page**: which panels the dashboard shows, and in which order (see
   [The stats fill](stats-fill.md#panels)).
-- **Idle** (the moon button): every edge on every monitor goes black after
-  30 s, 1 min or 5 min without input, and back on the next input, whatever
+- **Idle** (the moon button in the panel's footer, beside Ruler and
+  Clear): every edge on every monitor goes black after 30 s, 1 min or
+  5 min without input, and back on the next input, whatever
   the fill. Off by default. An app that holds off the screensaver, such as a
   video player, holds this off too.

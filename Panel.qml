@@ -91,6 +91,16 @@ Panel {
   // Keyboard cursor over the four edge rows.
   property int cursor: 0
   readonly property string cursorEdge: reserve.edgeNames[cursor]
+  // Keyboard cursor over the buttons of the Fill, Stats and Profiles pages,
+  // in reading order; -1 until a key moves it, so a mouse user sees none.
+  // Each page lists its rows' lengths in `cursorRows` and says what Enter
+  // does in `activate(index, alt)`.
+  property int pageCursor: -1
+  onPageChanged: pageCursor = -1
+  readonly property var pageView: page === "fill" ? fillPage
+    : page === "stats" ? statsPage
+    : page === "profiles" ? profilesPage
+    : null
 
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
@@ -178,6 +188,7 @@ Panel {
     pickedAlign = ""
     undo = null
     showKeys = false
+    pageCursor = -1
     // The profile on screen, ready to update or tie to these monitors; a
     // placeholder of its name looked typed but left Save and Auto off.
     profileDraft = reserve.currentProfile
@@ -360,9 +371,9 @@ Panel {
     var shift = event.modifiers & Qt.ShiftModifier
     var step = shift ? 100 : (event.modifiers & Qt.ControlModifier ? 1 : 10)
     var key = event.key
-    // The edge keys work on any page, and bring up the edges they move.
-    var edgeKeys = [Qt.Key_Up, Qt.Key_K, Qt.Key_Down, Qt.Key_J, Qt.Key_Left, Qt.Key_H, Qt.Key_Right, Qt.Key_L, Qt.Key_0, Qt.Key_Backspace, Qt.Key_Delete]
-    if (edgeKeys.indexOf(key) !== -1) page = "edges"
+    if (pageView && pageKey(event)) { event.accepted = true; return }
+    // Zeroing an edge brings up the edges it changes.
+    if (key === Qt.Key_0) page = "edges"
     if (key === Qt.Key_Up || key === Qt.Key_K) cursor = Math.max(0, cursor - 1)
     else if (key === Qt.Key_Down || key === Qt.Key_J) cursor = Math.min(reserve.edgeNames.length - 1, cursor + 1)
     else if (key === Qt.Key_Left || key === Qt.Key_H) nudge(cursorEdge, -step)
@@ -381,6 +392,37 @@ Panel {
     else if (key === Qt.Key_S) focusProfileField()
     else return
     event.accepted = true
+  }
+
+  // The arrows and h j k l walk the page's buttons, Enter presses the one
+  // under the cursor (Shift+Enter right-clicks it), x or Delete removes it
+  // where that means something, and Shift with an arrow moves it where the
+  // page orders things. The Edges page keeps these keys for the edges.
+  function pageKey(event) {
+    var key = event.key
+    var shift = event.modifiers & Qt.ShiftModifier
+    var dx = key === Qt.Key_Left || key === Qt.Key_H ? -1 : key === Qt.Key_Right || key === Qt.Key_L ? 1 : 0
+    var dy = key === Qt.Key_Up || key === Qt.Key_K ? -1 : key === Qt.Key_Down || key === Qt.Key_J ? 1 : 0
+    var view = pageView
+    if (dx || dy) {
+      if (pageCursor < 0) { pageCursor = Model.gridMove(view.cursorRows, view.cursorHome, 0, 0); return true }
+      if (shift && view.shiftItem) { var moved = view.shiftItem(pageCursor, dx || dy); if (moved >= 0) pageCursor = moved; return true }
+      if (dx && view.adjust && view.adjust(pageCursor, dx)) return true
+      pageCursor = Model.gridMove(view.cursorRows, pageCursor, dx, dy)
+      return true
+    }
+    if (key === Qt.Key_Return || key === Qt.Key_Enter) {
+      if (pageCursor < 0) pageCursor = Model.gridMove(view.cursorRows, view.cursorHome, 0, 0)
+      else view.activate(pageCursor, shift)
+      // What it pressed may have taken buttons away.
+      pageCursor = Model.gridMove(view.cursorRows, pageCursor, 0, 0)
+      return true
+    }
+    if (key === Qt.Key_X || key === Qt.Key_Delete || key === Qt.Key_Backspace) {
+      if (pageCursor >= 0 && view.remove) pageCursor = view.remove(pageCursor)
+      return true
+    }
+    return false
   }
 
   BarIconButton {
@@ -543,11 +585,13 @@ Panel {
             width: parent.width
           }
           Reserve.PanelFillPage {
+            id: fillPage
             visible: root.page === "fill"
             panel: root
             width: parent.width
           }
           Reserve.PanelStatsPage {
+            id: statsPage
             visible: root.page === "stats"
             panel: root
             width: parent.width
@@ -569,9 +613,12 @@ Panel {
             Repeater {
               model: [
                 "[ / ]", "Previous / next page",
-                "J / K", "Select edge",
-                "H / L", "Shrink / grow 10 px  ·  ⇧ 100  ·  Ctrl 1",
+                "J / K", "Edges: select edge  ·  other pages: move the cursor",
+                "H / L", "Edges: shrink / grow 10 px  ·  ⇧ 100  ·  Ctrl 1",
                 "0 / ⌫", "Zero edge",
+                "Enter", "Press the button under the cursor  ·  ⇧ right-click it",
+                "X / Del", "Hide a stats panel, delete a profile",
+                "⇧ J / K", "Move a stats panel earlier / later",
                 "U / Ctrl Z", "Undo a clear, zero, preset or profile change",
                 "Space / P", "Pause monitor",
                 "F", "Next fill",

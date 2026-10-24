@@ -20,9 +20,11 @@ them, one page at a time:
 | **Stats** | The dashboard's panels and their order, its animation and CPU power | [The stats fill](stats-fill.md) |
 | **Profiles** | Named snapshots of every monitor | [Profiles](profiles.md) |
 
-Click a tab or press `[` and `]` to switch pages; the edge keys bring up
-Edges. The panel opens on the page it was left on. On a screen too short
-for a page, the panel scrolls.
+Click a tab or press `[` and `]` to switch pages. The panel opens on the
+page it was left on. On a screen too short for a page, the panel scrolls.
+On the Fill, Stats and Profiles pages the arrows (or `h` `j` `k` `l`)
+move a cursor over the page's buttons and Enter presses the one under it,
+so every page works without a mouse; on Edges they move the edges.
 
 <p align="center">
   <img src="../panel-pages.png"
@@ -50,8 +52,10 @@ for a page, the panel scrolls.
 - **Switch** (top right, labelled On or Paused): pauses a monitor's
   reservation without forgetting the values. Right-clicking the bar icon
   does the same for the bar's monitor.
-- **Clear**: removes every reserved edge on the monitor. Right after a
-  Clear, or zeroing an edge, the button turns into **Undo**.
+- **Footer**: under every page, **Idle** (black when idle, see
+  [Fills](fills.md)), **Ruler** (above) and **Clear**, which removes every
+  reserved edge on the monitor. Right after a Clear, a zeroed edge, a
+  preset or a profile change, Clear turns into **Undo**.
 
 The **Fill** page and the **Idle** button are described in
 [Fills](fills.md), the **Stats** page in [The stats fill](stats-fill.md),
@@ -63,9 +67,12 @@ next to the edges, since a ruler on the screen measures something else.
 | Key | Action |
 | --- | --- |
 | `[` / `]` | Previous or next page |
-| `j` / `k`, ↓ / ↑ | Select an edge |
-| `h` / `l`, ← / → | Shrink or grow it by 10 px (Shift: 100, Ctrl: 1) |
-| `0`, Backspace, Delete | Zero the selected edge |
+| `j` / `k`, ↓ / ↑ | Edges: select an edge. Other pages: move the cursor |
+| `h` / `l`, ← / → | Edges: shrink or grow it by 10 px (Shift: 100, Ctrl: 1). Other pages: move the cursor; on the Dim slider, move it by 5% |
+| `0`, Backspace, Delete | Zero the selected edge (`0` brings up Edges) |
+| Enter | Press the button under the cursor (Shift+Enter: right-click it, as in "every monitor") |
+| `x`, Delete, Backspace | Stats: hide the selected panel. Profiles: delete the profile under the cursor (`u` undoes it) |
+| Shift+`j` / `k` | Stats: move the selected panel later or earlier |
 | `u`, Ctrl+Z | Undo a Clear, a zeroed edge, a preset or a profile change |
 | Space, `p` | Pause or resume the monitor |
 | `f` | Next fill |

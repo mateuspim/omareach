@@ -159,6 +159,37 @@ function rowCells(count, columns, index) {
   return index >= lastRow ? count - lastRow : columns
 }
 
+// The row lengths of `count` cells laid out `columns` to a row, the last
+// row taking the rest: what gridMove walks for one such grid.
+function gridRows(count, columns) {
+  var rows = []
+  for (var left = count; left > 0; left -= columns) rows.push(Math.min(columns, left))
+  return rows
+}
+
+// Where the keyboard cursor goes from cell `index` of a page whose cells
+// run in rows of `rows[i]` cells, `dx` cells along a row or `dy` rows up
+// or down. Along a row it stops at the ends; between rows it lands on the
+// cell under the middle of the one it left, since rows differ in length
+// and stretch across. Off the grid (-1, or past the end after cells went
+// away) it starts from the first cell or the last.
+function gridMove(rows, index, dx, dy) {
+  var total = rows.reduce(function(sum, length) { return sum + length }, 0)
+  if (total === 0) return -1
+  if (index < 0) return 0
+  if (index >= total) return total - 1
+  var row = 0, start = 0
+  while (index >= start + rows[row]) start += rows[row++]
+  var column = index - start
+  if (dx) return start + clamp(column + dx, 0, rows[row] - 1)
+  var target = clamp(row + dy, 0, rows.length - 1)
+  if (target === row) return index
+  var middle = (column + 0.5) / rows[row]
+  var targetStart = 0
+  for (var i = 0; i < target; i++) targetStart += rows[i]
+  return targetStart + Math.min(rows[target] - 1, Math.floor(middle * rows[target]))
+}
+
 function panelName(panel) {
   return PANEL_NAMES[panel] || title(String(panel))
 }

@@ -82,17 +82,23 @@ at a glance, from a distance:
 ## Panels
 
 The **Stats** page of the panel lists the panels this monitor shows, in
-order, with buttons to move each earlier or later; the dashboard lays
-them out in that order and leaves them off from the end when the edge
-runs out of room. A shown panel the dashboard does not draw says why:
-"doesn't fit" when the edge runs out of room, "not on this machine" for
-an iGPU panel without a second GPU or a Battery panel without a battery
-(which **Add** leaves out, and the count leaves out too). **✕** (or
-clicking the panel) hides it; click one under **Add** to show it last.
-Right-click either to do the same on every monitor. The
-page's **Every monitor** part sets the Animation and CPU power (below)
-for every dashboard. Without the Stats fill, the page offers to switch
-to it.
+order, two to a row; the dashboard lays them out in that order and
+leaves them off from the end when the edge runs out of room. Click a
+panel to select it, then **Earlier**, **Later** or **Hide** below the
+list act on it. A shown panel the dashboard does not draw is dimmed, and
+the line under the buttons says why when it is selected: "doesn't fit"
+when the edge runs out of room, "not on this machine" for an iGPU panel
+without a second GPU or a Battery panel without a battery (which **Add**
+leaves out, and the count leaves out too). Click one under **Add** to
+show it last. Right-click a panel, Hide or one under Add to do the same
+on every monitor. The page's **Every monitor** row sets the Animation
+and CPU power (below) for every dashboard. Without the Stats fill, the
+page offers to switch to it.
+
+From the keyboard, the arrows (or `h` `j` `k` `l`) walk the page and
+select the panel they reach; Shift with an arrow moves it earlier or
+later, `x` or Delete hides it, and Enter presses the button under the
+cursor.
 
 The System panel's facts barely change, so it keeps the same text lit in
 the same place all day; on an OLED panel, leave it off or last.
@@ -165,6 +171,6 @@ firmware and stall the CPU for a moment, are read every 5 seconds.
 
 The graphs scroll and the meters ease between samples at 30 frames a
 second by default, and the dashboard redraws only as often. The
-Animation button on the Stats page (or `pace`) sets it for every monitor:
+Animation list on the Stats page (or `pace`) sets it for every monitor:
 the display's own rate for the smoothest motion, 60, 30 or 15 fps, or no
 animation, which redraws once a second.
