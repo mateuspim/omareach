@@ -35,7 +35,7 @@ Column {
         { fill: "logo", icon: "󰣇", tip: "The Omarchy logo on black: stacked with its icon on the sides" },
         { fill: "wallpaper", icon: "󰋩", tip: "The slice of the wallpaper under the edge" },
         { fill: "dim", icon: "󰃞", tip: "The wallpaper slice, darkened" },
-        { fill: "clock", icon: "󰥔", tip: "A 24-hour clock on one edge; the others stay black" },
+        { fill: "clock", icon: "󰥔", tip: "A clock on one edge, 24- or 12-hour, with the date where it fits; the others stay black" },
         { fill: "stats", icon: "󰨇", tip: "A btop-style dashboard of GPU, CPU, memory and more on one edge; it stays up beside fullscreen games. Pick its panels on the Stats page" }
       ]
       Button {
@@ -135,6 +135,36 @@ Column {
         fontFamily: page.panel.fontFamily
         onClicked: { page.panel.setClockEdge(modelData.clockEdge); page.panel.refocus() }
       }
+    }
+  }
+
+  // Only for the clock: how it reads.
+  Row {
+    id: clockOptions
+    visible: page.edge.fill === "clock"
+    width: parent.width
+    spacing: Style.spacing.md
+    Button {
+      width: (clockOptions.width - clockOptions.spacing) / 2
+      text: "12-hour"
+      iconText: "󰥔"
+      tooltipText: page.edge.clockHours === 12 ? "12-hour time, without AM or PM. Click for 24-hour" : "24-hour time. Click for 12-hour, without AM or PM"
+      selected: page.edge.clockHours === 12
+      bordered: true
+      foreground: page.panel.foreground
+      fontFamily: page.panel.fontFamily
+      onClicked: { page.panel.setClockHours(page.edge.clockHours === 12 ? 24 : 12); page.panel.refocus() }
+    }
+    Button {
+      width: (clockOptions.width - clockOptions.spacing) / 2
+      text: "Date"
+      iconText: "󰃭"
+      tooltipText: "The date under the time, where the edge is tall enough that the time keeps its size"
+      selected: page.edge.clockDate
+      bordered: true
+      foreground: page.panel.foreground
+      fontFamily: page.panel.fontFamily
+      onClicked: { page.panel.toggleClockDate(); page.panel.refocus() }
     }
   }
 

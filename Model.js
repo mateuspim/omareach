@@ -26,6 +26,8 @@ var RETIRED_PANELS = { fans: "temps", pressure: "" }
 // Where the clock fill goes: the largest reserved edge, or the larger of
 // the top and bottom edges.
 var CLOCK_EDGES = ["largest", "topBottom"]
+// The clock fill's hours: 24-hour, or 12-hour without a leading zero.
+var CLOCK_HOURS = [24, 12]
 // How dark the dimmed fill makes the wallpaper, in percent.
 var DIM_DEFAULT = 60
 var DIM_MIN = 10
@@ -66,6 +68,8 @@ function normalize(raw) {
     enabled: entry.enabled !== false,
     fill: FILLS.indexOf(entry.fill) !== -1 ? entry.fill : "black",
     clockEdge: CLOCK_EDGES.indexOf(entry.clockEdge) !== -1 ? entry.clockEdge : "largest",
+    clockHours: CLOCK_HOURS.indexOf(entry.clockHours) !== -1 ? entry.clockHours : 24,
+    clockDate: entry.clockDate === true,
     dim: dimPercent(entry.dim),
     panels: panelList(entry.panels)
   }
@@ -169,6 +173,7 @@ function active(raw) {
 // Whether two normalized entries reserve, enable and fill the same.
 function same(a, b) {
   if (a.enabled !== b.enabled || a.fill !== b.fill || a.clockEdge !== b.clockEdge || a.dim !== b.dim) return false
+  if (a.clockHours !== b.clockHours || a.clockDate !== b.clockDate) return false
   if (String(a.panels) !== String(b.panels)) return false
   for (var i = 0; i < EDGES.length; i++) if (a[EDGES[i]] !== b[EDGES[i]]) return false
   return true
@@ -285,9 +290,12 @@ var CLOCK_CELLS = (function() {
   return 4 * most + GLYPHS[":"].join("").split("#").length - 1
 })()
 
-// 24-hour HH:MM.
-function clockText(date) {
-  return ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2)
+// HH:MM in 24-hour time, or H:MM in 12-hour time (`hours` 12), where a
+// leading zero would only read as a 24-hour clock.
+function clockText(date, hours) {
+  var minutes = ":" + ("0" + date.getMinutes()).slice(-2)
+  if (hours === 12) return String(date.getHours() % 12 || 12) + minutes
+  return ("0" + date.getHours()).slice(-2) + minutes
 }
 
 // The lit cells of `lines` (a string or an array of them) in GLYPHS, with
@@ -323,14 +331,28 @@ function clockBitmap(lines) {
 // The clock for a strip of `width` by `height`, always upright: HH:MM on one
 // line, or HH over MM when that gives bigger blocks, as on a side edge.
 // `cell` is the block size, leaving a block of margin all round; whole
-// pixels once they are 2 or more.
-function clockLayout(text, width, height) {
+// pixels once they are 2 or more. With `dated`, a line of date goes under
+// the time where the strip has the height for it (`date` says whether it
+// does): it takes DATE_ROWS rows of blocks, a blank one and the text.
+var DATE_ROWS = 4
+// The date shows only while the time keeps this much of its size without
+// it: on a tall edge, never by shrinking the clock on a short one.
+var DATE_KEEP = 0.8
+function clockLayout(text, width, height, dated) {
+  var plain = bestClock(text, width, height, 0)
+  if (!dated) return plain
+  var withDate = bestClock(text, width, height, DATE_ROWS)
+  return withDate.cell >= plain.cell * DATE_KEEP ? withDate : plain
+}
+
+function bestClock(text, width, height, extraRows) {
   var parts = String(text).split(":")
   var best = null
   var options = [clockBitmap(text), clockBitmap(parts)]
   for (var i = 0; i < options.length; i++) {
     var option = options[i]
-    option.cell = Math.max(0, Math.min(width / (option.columns + 2), height / (option.rows + 2)))
+    option.date = extraRows > 0
+    option.cell = Math.max(0, Math.min(width / (option.columns + 2), height / (option.rows + extraRows + 2)))
     if (!best || option.cell > best.cell) best = option
   }
   if (best.cell >= 2) best.cell = Math.floor(best.cell)

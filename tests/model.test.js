@@ -11,10 +11,10 @@ vm.runInNewContext(source, Model)
 const tests = {
   "normalize fills missing edges and defaults to enabled"() {
     const { panels, ...entry } = Model.normalize({ top: "350.4", left: -5 })
-    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
     assert.deepEqual([...panels], ["gpu", "cpu", "memory", "network"])
     const { panels: _, ...empty } = Model.normalize(undefined)
-    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
   },
   "panels keep known names, once each, in the order given"() {
     assert.deepEqual([...Model.panelList(["network", "gpu", "rainbow", "gpu"])], ["network", "gpu"])
@@ -163,6 +163,35 @@ const tests = {
   "clockText is 24-hour HH:MM"() {
     assert.equal(Model.clockText(new Date(2026, 8, 29, 7, 5)), "07:05")
     assert.equal(Model.clockText(new Date(2026, 8, 29, 23, 59)), "23:59")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 7, 5), 24), "07:05")
+  },
+  "clockText in 12-hour time has no leading zero"() {
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 7, 5), 12), "7:05")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 0, 30), 12), "12:30")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 12, 0), 12), "12:00")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 23, 59), 12), "11:59")
+  },
+  "normalize keeps the clock's hours and date, defaulting to 24-hour without"() {
+    assert.equal(Model.normalize({}).clockHours, 24)
+    assert.equal(Model.normalize({}).clockDate, false)
+    assert.equal(Model.normalize({ clockHours: 12, clockDate: true }).clockHours, 12)
+    assert.equal(Model.normalize({ clockHours: 13 }).clockHours, 24)
+    assert.equal(Model.normalize({ clockHours: "12" }).clockHours, 24)
+    assert.equal(Model.normalize({ clockDate: "yes" }).clockDate, false)
+    assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockHours: 12 })))
+    assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockDate: true })))
+    assert.ok(!Model.isDefault({ clockDate: true }))
+  },
+  "clockLayout adds the date only where it costs the time little"() {
+    // A tall top edge has the height: the date goes under the time.
+    const tall = Model.clockLayout("12:34", 1080, 660, true)
+    assert.equal(tall.date, true)
+    assert.ok(tall.cell >= Model.clockLayout("12:34", 1080, 660).cell * Model.DATE_KEEP)
+    assert.ok((tall.rows + Model.DATE_ROWS + 2) * tall.cell <= 660)
+    // A short strip would shrink the time: no date.
+    assert.equal(Model.clockLayout("12:34", 2560, 160, true).date, false)
+    // Without asking, never.
+    assert.equal(Model.clockLayout("12:34", 1080, 660).date, false)
   },
   "clockBitmap lays glyphs out with a gap"() {
     const one = Model.clockBitmap("1")
@@ -384,7 +413,7 @@ const tests = {
   "fit trims hand-edited entries to the shared limit"() {
     const fitted = Model.fit(Model.normalize({ top: 5000, bottom: 400, left: 100, right: 100 }), 1080, 1920)
     const { panels, ...edges } = fitted
-    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
+    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
     const kept = Model.fit(Model.normalize({ top: 400, bottom: 200 }), 1080, 1920)
     assert.equal(kept.top, 400)
     assert.equal(kept.bottom, 200)

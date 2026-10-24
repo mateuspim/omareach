@@ -270,7 +270,7 @@ Panel {
   // and clock edge, so they all look alike; one undo puts them all back.
   function setFillEverywhere(fill) {
     var before = reserve.outputs
-    var settings = { fill: fill, dim: edge.dim, clockEdge: edge.clockEdge, panels: edge.panels }
+    var settings = { fill: fill, dim: edge.dim, clockEdge: edge.clockEdge, clockHours: edge.clockHours, clockDate: edge.clockDate, panels: edge.panels }
     screenNames.forEach(function(name) { reserve.update(name, settings) })
     if (!Model.sameOutputs(before, reserve.outputs))
       undo = { outputs: before, text: "Restore each monitor's own fill" }
@@ -284,6 +284,15 @@ Panel {
     if (Model.SINGLE_FILLS.indexOf(edge.fill) === -1 || clockEdge === edge.clockEdge) return
     undo = null
     reserve.setClockEdge(output, clockEdge)
+  }
+  function setClockHours(hours) {
+    if (hours === edge.clockHours) return
+    undo = null
+    reserve.setClockHours(output, hours)
+  }
+  function toggleClockDate() {
+    undo = null
+    reserve.setClockDate(output, !edge.clockDate)
   }
   function togglePanel(panel) {
     undo = null

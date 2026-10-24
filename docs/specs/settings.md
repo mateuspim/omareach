@@ -12,7 +12,7 @@ the contract for that file, taken from the code.
   "outputs": {
     "Dell Inc. DELL U2720Q 1A2B3C4": {
       "enabled": true, "top": 660, "bottom": 0, "left": 0, "right": 0,
-      "fill": "stats", "clockEdge": "largest", "dim": 60,
+      "fill": "stats", "clockEdge": "largest", "clockHours": 24, "clockDate": false, "dim": 60,
       "panels": ["gpu", "cpu", "memory", "network"]
     },
     "DP-5": { "enabled": false, "top": 0, "bottom": 0, "left": 0, "right": 120 }
@@ -20,7 +20,7 @@ the contract for that file, taken from the code.
   "idleBlack": 60,
   "statsPace": 0,
   "profiles": {
-    "Desk": { "Dell Inc. DELL U2720Q 1A2B3C4": { "enabled": true, "top": 660, "bottom": 0, "left": 0, "right": 0, "fill": "stats", "clockEdge": "largest", "dim": 60, "panels": ["gpu", "cpu", "memory", "network"] } }
+    "Desk": { "Dell Inc. DELL U2720Q 1A2B3C4": { "enabled": true, "top": 660, "bottom": 0, "left": 0, "right": 0, "fill": "stats", "clockEdge": "largest", "clockHours": 24, "clockDate": false, "dim": 60, "panels": ["gpu", "cpu", "memory", "network"] } }
   },
   "autoProfiles": { "Desk": ["Dell Inc. DELL U2720Q 1A2B3C4", "DP-5"] },
   "monitors": ["DP-5", "Dell Inc. DELL U2720Q 1A2B3C4"]
@@ -59,6 +59,8 @@ Every field is optional; `Model.normalize` fills in the rest.
 | `top`, `bottom`, `left`, `right` | integer logical pixels | `0` | Rounded, negatives and non-numbers become 0. |
 | `fill` | string | `"black"` | One of `black`, `theme`, `logo`, `wallpaper`, `dim`, `clock`, `stats`; anything else is `black`. |
 | `clockEdge` | string | `"largest"` | `largest` or `topBottom`: where the clock and stats fills go. |
+| `clockHours` | integer | `24` | `24` or `12`; anything else is `24`. The 12-hour clock has no leading zero and no AM or PM. |
+| `clockDate` | boolean | `false` | Only `true` turns it on: the date under the clock, where the edge is tall enough that the time keeps at least 80% of its size. |
 | `dim` | integer percent | `60` | Rounded and clamped to 10 to 90; a non-number is 60. |
 | `panels` | array of strings | `["gpu", "cpu", "memory", "network"]` | Known panel names only, each once, in the order given, which is the order the dashboard lays them out and drops them from the end when the strip runs out of room. The names are `gpu`, `igpu`, `cpu`, `memory`, `network`, `disks`, `processes`, `temps` (the Sensors panel), `battery`, `media`, `system`. 1.7's `fans` reads as `temps` and its `pressure` is dropped, since their numbers moved to Sensors and to the CPU, Memory and Disks panels. Anything but an array is the default; `[]` is a dashboard with no panels. |
 
@@ -68,7 +70,8 @@ of each pair (`top`, `left`) keeps what fits and the second gets the
 rest. Values over the budget, such as after a switch to a smaller mode,
 are trimmed when drawn, not rewritten.
 
-Clear removes the edges but keeps `fill`, `clockEdge`, `dim` and `panels`;
+Clear removes the edges but keeps `fill`, `clockEdge`, `clockHours`,
+`clockDate`, `dim` and `panels`;
 an entry left with only default values is removed.
 
 ## Profiles
