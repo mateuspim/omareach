@@ -326,13 +326,14 @@ Item {
 
     // The details: label, meter and value rows, then ranked lists. No
     // wider than this: across a very wide card a label and its value
-    // drift too far apart to read as one.
+    // drift too far apart to read as one, and the graphs beside them make
+    // better use of the width. 32 units still holds the CPU's load row.
     ColumnLayout {
       id: rowsColumn
       Layout.fillWidth: true
       Layout.fillHeight: card.wide
       Layout.preferredWidth: 3
-      Layout.maximumWidth: card.unit * 40
+      Layout.maximumWidth: card.unit * 32
       Layout.alignment: Qt.AlignTop
       spacing: Math.round(card.unit * 0.35)
       visible: card.shown.rows.length > 0 || card.shown.lists.length > 0
