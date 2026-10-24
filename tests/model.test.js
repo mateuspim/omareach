@@ -209,16 +209,34 @@ const tests = {
     assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockDate: true })))
     assert.ok(!Model.isDefault({ clockDate: true }))
   },
-  "clockLayout adds the date only where it costs the time little"() {
-    // A tall top edge has the height: the date goes under the time.
+  "clockLayout puts the date under or beside the time, whichever keeps it bigger"() {
+    const plain = (w, h) => Model.clockLayout("12:34", w, h).cell
+    // A tall top edge: under the time, at full size.
     const tall = Model.clockLayout("12:34", 1080, 660, true)
-    assert.equal(tall.date, true)
-    assert.ok(tall.cell >= Model.clockLayout("12:34", 1080, 660).cell * Model.DATE_KEEP)
-    assert.ok((tall.rows + Model.DATE_ROWS + 2) * tall.cell <= 660)
-    // A short strip would shrink the time: no date.
-    assert.equal(Model.clockLayout("12:34", 2560, 160, true).date, false)
+    assert.equal(tall.date, "under")
+    assert.equal(tall.cell, plain(1080, 660))
+    assert.ok((tall.spanRows + 2) * tall.cell <= 660)
+    // A short edge on a portrait monitor gives up some size for it.
+    const short = Model.clockLayout("12:34", 1080, 460, true)
+    assert.equal(short.date, "under")
+    assert.ok(short.cell >= plain(1080, 460) * Model.DATE_KEEP)
+    // A short wide strip: beside the time, which keeps its size.
+    for (const [w, h] of [[2560, 160], [2560, 300], [3440, 400]]) {
+      const strip = Model.clockLayout("12:34", w, h, true)
+      assert.equal(strip.date, "beside", `${w}x${h}`)
+      assert.equal(strip.cell, plain(w, h))
+      assert.ok((strip.spanColumns + 2) * strip.cell <= w)
+      assert.equal(strip.dateBox.x, strip.columns + Model.DATE_GAP)
+    }
+    // Where neither keeps most of the time's size, no date.
+    assert.equal(Model.clockLayout("12:34", 400, 150, true).date, "")
+    // The place holds whatever the time: a narrow 12-hour "3:24" does not
+    // lose the date that "12:34" has.
+    assert.equal(Model.clockLayout("3:24", 1080, 460, true).date, "under")
+    for (const text of ["1:05", "9:59", "10:00", "12:59"]) assert.equal(Model.clockLayout(text, 2560, 160, true).date, "beside")
     // Without asking, never.
-    assert.equal(Model.clockLayout("12:34", 1080, 660).date, false)
+    assert.equal(Model.clockLayout("12:34", 1080, 660).date, "")
+    assert.equal(Model.clockLayout("12:34", 1080, 660).dateBox, null)
   },
   "clockBitmap lays glyphs out with a gap"() {
     const one = Model.clockBitmap("1")

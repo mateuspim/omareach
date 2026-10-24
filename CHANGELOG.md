@@ -10,8 +10,9 @@
   Stats page Shift with an arrow moves the selected panel and `x` hides
   it; on the Profiles page `x` deletes a profile, which `u` undoes. The
   Dim slider moves with left and right. The Edges page keeps its keys.
-- **Clock options:** 12-hour time, and the date under the clock where the
-  edge is tall enough that the time keeps its size. Per monitor, on the
+- **Clock options:** 12-hour time, and the date under the clock, or
+  beside it on a short wide edge, wherever the time keeps most of its
+  size. Per monitor, on the
   Fill page and over IPC (`clockHours`, `clockDate`).
 
 ### Changed

@@ -17,9 +17,9 @@ Omarchy logo, a clock or the stats dashboard, and black when idle.
   whenever either is reserved. The monitor's other edges stay black. The
   digits are always upright and as large as the edge allows: one line on a
   wide edge, hours over minutes on a tall one. With **Date** on, the date
-  ("Sat 24 Oct", in your locale) goes under the time when the edge is tall
-  enough that the time keeps most of its size; a short strip shows only
-  the time. **Stats** turns the same one
+  ("Sat 24 Oct", in your locale) goes under the time, or beside it on a
+  short wide edge, wherever the time keeps most of its size; only a small
+  edge shows the time alone. **Stats** turns the same one
   edge into a live system dashboard in the style of btop (see [The stats fill](stats-fill.md)).
   **Same on every monitor** (or right-clicking a fill) gives every monitor
   this one's fill, with its dim amount, clock settings and stats panels.

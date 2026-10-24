@@ -209,7 +209,7 @@ Column {
       hasCursor: page.cursorOn(page.optionsAt + 1)
       text: "Date"
       iconText: "󰃭"
-      tooltipText: "The date under the time, where the edge is tall enough that the time keeps its size"
+      tooltipText: "The date under the time, or beside it on a short wide edge, where the time keeps most of its size"
       selected: page.edge.clockDate
       bordered: true
       foreground: page.panel.foreground

@@ -110,16 +110,16 @@ Rectangle {
   }
 
   // A clock in big blocky digits, always upright: one line on a wide
-  // strip, hours over minutes on a tall one, and the date under it where
-  // there is room. It ticks on the minute and moves a few pixels every few
+  // strip, hours over minutes on a tall one, and the date under or beside
+  // it where there is room. It ticks on the minute and moves a few pixels every few
   // minutes, against burn-in.
   Item {
     id: clock
     readonly property var layout: Model.clockLayout(Model.clockText(fill.now, fill.clockHours), fill.width, fill.height, fill.clockDate)
     readonly property real cell: layout.cell
     visible: fill.mode === "clock" && cell >= 1
-    width: layout.columns * cell
-    height: (layout.rows + (layout.date ? Model.DATE_ROWS : 0)) * cell
+    width: layout.spanColumns * cell
+    height: layout.spanRows * cell
     // A twelfth of a block per step: enough to spread the wear, too little
     // to look off-center.
     x: Math.round((fill.width - width) / 2 + fill.shift.x * cell / 12)
@@ -142,14 +142,16 @@ Rectangle {
     }
 
     // In the font rather than in blocks: the glyphs have no letters. It
-    // fills the rows below the time, and shrinks to the clock's width.
+    // fills its box under or beside the time, and shrinks to its width.
     Text {
-      visible: clock.layout.date
       textFormat: Text.PlainText
-      y: (clock.layout.rows + 1) * clock.cell
-      width: parent.width
-      height: (Model.DATE_ROWS - 1) * clock.cell
-      horizontalAlignment: Text.AlignHCenter
+      readonly property var box: clock.layout.dateBox || ({ x: 0, y: 0, width: 0, height: 0 })
+      visible: clock.layout.date !== ""
+      x: box.x * clock.cell
+      y: Math.round(box.y * clock.cell)
+      width: box.width * clock.cell
+      height: box.height * clock.cell
+      horizontalAlignment: clock.layout.date === "beside" ? Text.AlignLeft : Text.AlignHCenter
       verticalAlignment: Text.AlignVCenter
       text: visible ? Qt.formatDate(fill.now, "ddd d MMM") : ""
       color: fill.clockColor

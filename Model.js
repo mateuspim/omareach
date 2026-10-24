@@ -362,28 +362,48 @@ function clockBitmap(lines) {
 // The clock for a strip of `width` by `height`, always upright: HH:MM on one
 // line, or HH over MM when that gives bigger blocks, as on a side edge.
 // `cell` is the block size, leaving a block of margin all round; whole
-// pixels once they are 2 or more. With `dated`, a line of date goes under
-// the time where the strip has the height for it (`date` says whether it
-// does): it takes DATE_ROWS rows of blocks, a blank one and the text.
+// pixels once they are 2 or more. `spanColumns` by `spanRows` is all it
+// takes, in blocks.
+//
+// With `dated`, a line of date goes with the time where there is room:
+// under it (DATE_ROWS rows: a blank one and three of text) or, on a short
+// wide strip whose height limits the time, beside it (a gap of DATE_GAP
+// and DATE_COLUMNS columns), whichever keeps the bigger clock. `date` is
+// "under", "beside", or "" where neither keeps DATE_KEEP of the time's
+// size; `dateBox` is where its text goes, in blocks.
 var DATE_ROWS = 4
-// The date shows only while the time keeps this much of its size without
-// it: on a tall edge, never by shrinking the clock on a short one.
-var DATE_KEEP = 0.8
+var DATE_GAP = 2
+// "Sat 24 Oct" at three blocks high; a longer name shrinks to fit.
+var DATE_COLUMNS = 15
+var DATE_KEEP = 0.7
 function clockLayout(text, width, height, dated) {
-  var plain = bestClock(text, width, height, 0)
-  if (!dated) return plain
-  var withDate = bestClock(text, width, height, DATE_ROWS)
-  return withDate.cell >= plain.cell * DATE_KEEP ? withDate : plain
+  return bestClock(text, width, height, dated ? datePlace(width, height) : "")
 }
 
-function bestClock(text, width, height, extraRows) {
+// Where the date goes on a strip, decided for the widest time rather than
+// the one showing: "1:05" is narrower than "12:59", and the date must not
+// come and go as the hours change.
+function datePlace(width, height) {
+  var plain = bestClock("00:00", width, height, "")
+  var under = bestClock("00:00", width, height, "under")
+  var beside = bestClock("00:00", width, height, "beside")
+  var best = beside.cell > under.cell ? beside : under
+  return best.cell >= plain.cell * DATE_KEEP ? best.date : ""
+}
+
+function bestClock(text, width, height, date) {
   var parts = String(text).split(":")
   var best = null
   var options = [clockBitmap(text), clockBitmap(parts)]
   for (var i = 0; i < options.length; i++) {
     var option = options[i]
-    option.date = extraRows > 0
-    option.cell = Math.max(0, Math.min(width / (option.columns + 2), height / (option.rows + extraRows + 2)))
+    option.date = date
+    option.spanColumns = option.columns + (date === "beside" ? DATE_GAP + DATE_COLUMNS : 0)
+    option.spanRows = option.rows + (date === "under" ? DATE_ROWS : 0)
+    option.dateBox = date === "under" ? { x: 0, y: option.rows + 1, width: option.columns, height: DATE_ROWS - 1 }
+      : date === "beside" ? { x: option.columns + DATE_GAP, y: (option.rows - 3) / 2, width: DATE_COLUMNS, height: 3 }
+      : null
+    option.cell = Math.max(0, Math.min(width / (option.spanColumns + 2), height / (option.spanRows + 2)))
     if (!best || option.cell > best.cell) best = option
   }
   if (best.cell >= 2) best.cell = Math.floor(best.cell)
