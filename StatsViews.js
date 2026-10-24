@@ -20,9 +20,11 @@ var CARD_MIN_HEIGHT = 6
 
 // Units of height a card needs for its content: stacked, and wide with
 // its rows beside the graphs. A card is wide past this width for its
-// height.
+// height. A short strip is all wide cards, and there larger text with a
+// row or two fewer reads better than every row at 9 or 10 px: at 8 units
+// a 160 px strip keeps 16 px text and three rows.
 var CARD_ROOM = 14
-var WIDE_ROOM = 10
+var WIDE_ROOM = 8
 var WIDE_CARD = 2
 
 function roomy(card, unit) {
@@ -202,6 +204,7 @@ function view(panel, state, palette, room, wide, span, shown) {
   }
   var build = VIEWS[panel]
   if (build) build(result, state, palette, g, room, wide, span, shown || [])
+  if (room !== undefined && wide) fitHeadline(result, room)
   if (room !== undefined) result.rows = result.rows.slice(0, rowsThatFit(result, room, wide))
   return result
 }
@@ -237,9 +240,28 @@ var GAP_ROWS = 0.3
 // out, and whatever room is over goes to the graphs.
 function rowsThatFit(v, room, wide) {
   if (wide) return Math.max(0, room)
-  var headline = (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
+  var headline = headlineRows(v)
   if (headline > 0) headline += GAP_ROWS
   return Math.max(0, Math.floor(room - headline + 1e-9))
+}
+
+// Rows' room a view's headline takes, without the gap below it.
+function headlineRows(v) {
+  return (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
+}
+
+// A wide card's headline has the card's `room` rows beside the rows, and
+// what does not fit is left out rather than squeezed to a sliver: the
+// per-core bars first (the load graph says the same in one line), then
+// the stacked bar, the note unless it carries a warning, and graphs after
+// the first. Nothing sits under it, so it may use the gap a stacked card
+// keeps below its headline.
+function fitHeadline(v, room) {
+  var over = function() { return headlineRows(v) > room + GAP_ROWS }
+  if (over() && v.bars.length) v.bars = []
+  if (over() && v.stack.length) v.stack = []
+  if (over() && v.note && !v.alert) v.note = ""
+  while (over() && v.graphs.length > 1) v.graphs = v.graphs.slice(0, -1)
 }
 
 // The rows of a GPU panel for one GPU, whichever its vendor: load with

@@ -622,10 +622,39 @@ const tests = {
     assert.equal(strip.cards.length, 4)
     assert.ok(strip.cards[0].width > strip.cards[0].height * Views.WIDE_CARD)
     assert.ok(strip.cards[0].height >= Views.WIDE_ROOM * strip.unit)
+    // Wide cards take fewer rows for larger text: a 160 px strip keeps
+    // 16 px text, not the 13 px that every row needed.
+    assert.ok(strip.unit >= 16, String(strip.unit))
+    assert.ok(Views.fit(["gpu", "cpu", "memory", "network"], 2560, 120).unit >= 12)
     // When nothing makes room, the smallest text still shows what fits.
     const tiny = Views.fit(ALL_PANELS, 600, 120)
     assert.equal(tiny.unit, 9)
     assert.ok(tiny.cards.length > 0)
+  },
+  "a wide card leaves out the headline parts it has no room for"() {
+    const view = () => ({ value: "39%", note: "Tctl · 95°C", alert: 0, graphs: [{}, {}], bars: [{}, {}], stack: [{}] })
+    // Room for everything: nothing goes.
+    const roomy = view()
+    Views.fitHeadline(roomy, 10)
+    assert.equal(roomy.bars.length, 2)
+    assert.equal(roomy.graphs.length, 2)
+    // Three rows: the bars go first, then the stack, the note and the
+    // second graph, never the value or the first graph.
+    const short = view()
+    Views.fitHeadline(short, 3)
+    assert.equal(short.bars.length, 0)
+    assert.equal(short.stack.length, 0)
+    assert.equal(short.note, "")
+    assert.equal(short.graphs.length, 1)
+    assert.ok(Views.headlineRows(short) <= 3 + Views.GAP_ROWS)
+    // Four rows keep the CPU's value, graph and per-core bars.
+    const cpu = { value: "39%", note: "", alert: 0, graphs: [{}], bars: [{}], stack: [] }
+    Views.fitHeadline(cpu, 4)
+    assert.equal(cpu.bars.length, 1)
+    // A warning's note stays.
+    const warned = Object.assign(view(), { alert: Views.ALERT })
+    Views.fitHeadline(warned, 3)
+    assert.equal(warned.note, "Tctl · 95°C")
   },
   "layout drops the last panels when they do not fit"() {
     const grid = Views.layout(["gpu", "cpu", "memory", "network", "disks"], 600, 120, 12)
