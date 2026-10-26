@@ -20,13 +20,20 @@ var CARD_MIN_HEIGHT = 6
 
 // Units of height a card needs for its content: stacked, and wide with
 // its rows beside the graphs. A card is wide past this width for its
-// height.
+// height. A short strip is all wide cards, and there larger text with a
+// row or two fewer reads better than every row at 9 or 10 px: at 8 units
+// a 160 px strip keeps 16 px text and three rows.
 var CARD_ROOM = 14
-var WIDE_ROOM = 10
+var WIDE_ROOM = 8
 var WIDE_CARD = 2
+// Units of width a wide card needs for its headline and rows side by
+// side. Its height alone let a 300 px card on a portrait strip take 16 px
+// text, and every label and value was cut short.
+var WIDE_SPAN = 22
 
 function roomy(card, unit) {
-  return card.height >= (card.width > card.height * WIDE_CARD ? WIDE_ROOM : CARD_ROOM) * unit
+  if (card.width > card.height * WIDE_CARD) return card.height >= WIDE_ROOM * unit && card.width >= WIDE_SPAN * unit
+  return card.height >= CARD_ROOM * unit
 }
 
 // The layout with the largest text that keeps every panel and gives each
@@ -91,7 +98,7 @@ var ICONS = {
 var TITLES = { gpu: "GPU", igpu: "iGPU", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes" }
 
 function row(label, text, fraction, color) {
-  return { label: label, text: text, fraction: fraction === null || fraction === undefined ? null : Math.max(0, Math.min(1, fraction)), color: color || "", swatch: false }
+  return { label: label, text: text, fraction: fraction === null || fraction === undefined ? null : Math.max(0, Math.min(1, fraction)), color: color || "", swatch: false, tip: "" }
 }
 
 // A row with no meter whose label carries a square of `color`: the key to
@@ -186,7 +193,8 @@ function graphMax(values, floor) {
 // optional label), per-core bars (a `gap` entry splits them into groups),
 // a stacked bar of `stack` parts, label/value rows with meters and ranked
 // lists. `note` is a line under the headline, for what its caption has no
-// room for. `alert` asks for the card's warning color, 0 for none to
+// room for. `captionTip`, `noteTip` and a row's `tip` say in full what
+// they name, shown on hover. `alert` asks for the card's warning color, 0 for none to
 // CRITICAL. `empty` replaces the
 // content with a message. `room` is how many rows the card has space for,
 // for panels whose lists can grow to fill it, `wide` whether its rows sit
@@ -197,11 +205,12 @@ function view(panel, state, palette, room, wide, span, shown) {
   var g = palette.gradients
   var result = {
     title: TITLES[panel] || panel, icon: ICONS[panel] || "", color: palette.boxes[panel] || palette.accent,
-    info: "", value: "", valueColor: palette.foreground, caption: "", note: "",
+    info: "", value: "", valueColor: palette.foreground, caption: "", captionTip: "", note: "", noteTip: "",
     graphs: [], bars: [], stack: [], rows: [], lists: [], empty: "", logo: false, alert: 0
   }
   var build = VIEWS[panel]
   if (build) build(result, state, palette, g, room, wide, span, shown || [])
+  if (room !== undefined && wide) fitHeadline(result, room)
   if (room !== undefined) result.rows = result.rows.slice(0, rowsThatFit(result, room, wide))
   return result
 }
@@ -237,9 +246,28 @@ var GAP_ROWS = 0.3
 // out, and whatever room is over goes to the graphs.
 function rowsThatFit(v, room, wide) {
   if (wide) return Math.max(0, room)
-  var headline = (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
+  var headline = headlineRows(v)
   if (headline > 0) headline += GAP_ROWS
   return Math.max(0, Math.floor(room - headline + 1e-9))
+}
+
+// Rows' room a view's headline takes, without the gap below it.
+function headlineRows(v) {
+  return (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
+}
+
+// A wide card's headline has the card's `room` rows beside the rows, and
+// what does not fit is left out rather than squeezed to a sliver: the
+// per-core bars first (the load graph says the same in one line), then
+// the stacked bar, the note unless it carries a warning, and graphs after
+// the first. Nothing sits under it, so it may use the gap a stacked card
+// keeps below its headline.
+function fitHeadline(v, room) {
+  var over = function() { return headlineRows(v) > room + GAP_ROWS }
+  if (over() && v.bars.length) v.bars = []
+  if (over() && v.stack.length) v.stack = []
+  if (over() && v.note && !v.alert) v.note = ""
+  while (over() && v.graphs.length > 1) v.graphs = v.graphs.slice(0, -1)
 }
 
 // The rows of a GPU panel for one GPU, whichever its vendor: load with
@@ -530,7 +558,7 @@ var VIEWS = {
   // Every battery: the laptop's, or else the emptiest peripheral's, leads
   // with a bar of its level and whether it charges; the rest are rows,
   // each with its meter. A laptop adds its draw, energy, health and cycles.
-  battery: function(v, state, palette, g) {
+  battery: function(v, state, palette, g, room, wide) {
     var laptop = state.power.filter(function(b) { return !b.device })[0]
     var devices = state.power.filter(function(b) { return b.device })
     if (!laptop && !devices.length) { v.empty = "No batteries"; return }
@@ -543,6 +571,14 @@ var VIEWS = {
     function draining(b) { return b.status === "Discharging" || (b.device && !charging(b) && !/^Full/.test(b.status)) }
     function color(p) { return Stats.gradientAt(g.level, 1 - (p || 0) / 100) }
     function hours(h) { return Math.floor(h) + "h " + Math.floor(h * 60) % 60 + "m" }
+    // A device by its kind ("Mouse", "Headset") while no other shares it:
+    // shorter than a model name ("Logitech G502 X LIGHTSPEED"), which a
+    // narrow card cut to "G50…", and plainer. Two of a kind keep their
+    // names, as does a device whose kind is unknown.
+    function label(b) {
+      var same = b.kind ? devices.filter(function(d) { return d.kind === b.kind }).length : 0
+      return same === 1 ? b.kind : b.name
+    }
     // Low and not on a charger: the card asks for attention, louder as it
     // empties, the laptop's and every peripheral's alike.
     var lowest = null
@@ -570,7 +606,12 @@ var VIEWS = {
       if (laptop.health > 0) v.rows.push(row("Health", Stats.formatPercent(laptop.health), laptop.health / 100, color(laptop.health)))
       if (laptop.cycles > 0) v.rows.push(row("Cycles", String(laptop.cycles), null))
     } else {
-      v.caption = lead.name + (charging(lead) ? "  ·  charging" : "")
+      // Beside the value a wide card's headline leaves the name about four
+      // letters ("Mou…"); the line under the value has the column's width.
+      var name = label(lead) + (charging(lead) ? "  ·  charging" : "")
+      var tip = label(lead) === lead.name ? "" : lead.name
+      if (wide) { v.note = name; v.noteTip = tip }
+      else { v.caption = name; v.captionTip = tip }
       v.info = devices.length > 1 ? devices.length + " devices" : ""
       // What the device says of itself, where it says anything the caption
       // does not ("charging").
@@ -578,13 +619,23 @@ var VIEWS = {
     }
     // How low the emptiest draining battery is, in words, while the card
     // warns; named when it is not the one leading the card.
-    if (lowest) v.note = (lowest === lead ? "" : lowest.name + " ") + ["", "low", "very low", "critical"][v.alert]
+    // After the lead's name in a wide card, which must still say whose the
+    // big number is: "Mouse  ·  charging  ·  Headset low".
+    if (lowest) {
+      var warning = ["", "low", "very low", "critical"][v.alert]
+      var low = lowest === lead ? warning : label(lowest) + " " + warning
+      v.note = v.note ? v.note + "  ·  " + low : low
+      if (lowest !== lead && label(lowest) !== lowest.name) v.noteTip = [v.noteTip, lowest.name].filter(Boolean).join("  ·  ")
+    }
     devices.forEach(function(d) {
       // The peripheral leading the panel is not listed again.
       if (d === lead) return
       var p = percent(d)
-      v.rows.push(row(d.name, (p !== null ? Stats.formatPercent(p) : d.level || "—") + (charging(d) ? " " + CHARGING : ""),
-        p === null ? null : p / 100, color(p)))
+      var deviceRow = row(label(d), (p !== null ? Stats.formatPercent(p) : d.level || "—") + (charging(d) ? " " + CHARGING : ""),
+        p === null ? null : p / 100, color(p))
+      // Which headset it is, on hover: a kind alone does not say.
+      if (deviceRow.label !== d.name) deviceRow.tip = d.name
+      v.rows.push(deviceRow)
     })
   },
 

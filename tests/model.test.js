@@ -11,10 +11,10 @@ vm.runInNewContext(source, Model)
 const tests = {
   "normalize fills missing edges and defaults to enabled"() {
     const { panels, ...entry } = Model.normalize({ top: "350.4", left: -5 })
-    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
     assert.deepEqual([...panels], ["gpu", "cpu", "memory", "network"])
     const { panels: _, ...empty } = Model.normalize(undefined)
-    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
   },
   "panels keep known names, once each, in the order given"() {
     assert.deepEqual([...Model.panelList(["network", "gpu", "rainbow", "gpu"])], ["network", "gpu"])
@@ -86,6 +86,46 @@ const tests = {
     // A full grid keeps every row whole.
     assert.equal(Model.rowCells(9, 3, 8), 3)
     assert.equal(Model.rowCells(1, 4, 0), 1)
+  },
+  "gridRows splits cells into rows with the rest last"() {
+    assert.deepEqual([...Model.gridRows(7, 4)], [4, 3])
+    assert.deepEqual([...Model.gridRows(6, 3)], [3, 3])
+    assert.deepEqual([...Model.gridRows(0, 3)], [])
+  },
+  "gridMove walks the page's rows and lands under the middle"() {
+    // Fills four then three, Shown on two, one button.
+    const rows = [4, 3, 2, 1]
+    assert.equal(Model.gridMove(rows, 0, 1, 0), 1)
+    // Stops at the ends of a row instead of wrapping into the next.
+    assert.equal(Model.gridMove(rows, 3, 1, 0), 3)
+    assert.equal(Model.gridMove(rows, 4, -1, 0), 4)
+    // Down from the last of four lands on the last of three; from the
+    // first on the first.
+    assert.equal(Model.gridMove(rows, 3, 0, 1), 6)
+    assert.equal(Model.gridMove(rows, 0, 0, 1), 4)
+    // Into a row of one, and back up to its middle.
+    assert.equal(Model.gridMove(rows, 7, 0, 1), 9)
+    assert.equal(Model.gridMove(rows, 9, 0, -1), 8)
+    // Stops at the top and the bottom.
+    assert.equal(Model.gridMove(rows, 1, 0, -1), 1)
+    assert.equal(Model.gridMove(rows, 9, 0, 1), 9)
+    // Off the grid: the first cell, or the last after cells went away.
+    assert.equal(Model.gridMove(rows, -1, 0, 1), 0)
+    assert.equal(Model.gridMove(rows, 12, 0, 1), 9)
+    assert.equal(Model.gridMove([], 0, 0, 1), -1)
+  },
+  "cursorAfter keeps the cursor on the button it pressed"() {
+    // Hide with three panels shown: one goes, and Hide moves up one place.
+    const before = ["shown:gpu", "shown:cpu", "shown:memory", "earlier", "later", "hide", "add:disks", "pace"]
+    const after = ["shown:gpu", "shown:cpu", "earlier", "later", "hide", "add:memory", "add:disks", "pace"]
+    assert.equal(Model.cursorAfter(after, before[5], 5), 4)
+    // An added panel is followed to its place among those shown.
+    const added = ["shown:gpu", "shown:cpu", "shown:memory", "shown:disks", "earlier", "later", "hide", "pace"]
+    assert.equal(Model.cursorAfter(added, "add:disks", 6, "shown:disks"), 3)
+    // Gone without a fallback: the same place, kept on the page.
+    assert.equal(Model.cursorAfter(["use", "pace"], "use", 0), 0)
+    assert.equal(Model.cursorAfter(["pace"], "hide", 5), 0)
+    assert.equal(Model.cursorAfter([], "hide", 5), -1)
   },
   "the panel list counts in same and isDefault"() {
     assert.ok(!Model.same(Model.normalize({ panels: ["gpu"] }), Model.normalize({})))
@@ -163,6 +203,53 @@ const tests = {
   "clockText is 24-hour HH:MM"() {
     assert.equal(Model.clockText(new Date(2026, 8, 29, 7, 5)), "07:05")
     assert.equal(Model.clockText(new Date(2026, 8, 29, 23, 59)), "23:59")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 7, 5), 24), "07:05")
+  },
+  "clockText in 12-hour time has no leading zero"() {
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 7, 5), 12), "7:05")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 0, 30), 12), "12:30")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 12, 0), 12), "12:00")
+    assert.equal(Model.clockText(new Date(2026, 8, 29, 23, 59), 12), "11:59")
+  },
+  "normalize keeps the clock's hours and date, defaulting to 24-hour without"() {
+    assert.equal(Model.normalize({}).clockHours, 24)
+    assert.equal(Model.normalize({}).clockDate, false)
+    assert.equal(Model.normalize({ clockHours: 12, clockDate: true }).clockHours, 12)
+    assert.equal(Model.normalize({ clockHours: 13 }).clockHours, 24)
+    assert.equal(Model.normalize({ clockHours: "12" }).clockHours, 24)
+    assert.equal(Model.normalize({ clockDate: "yes" }).clockDate, false)
+    assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockHours: 12 })))
+    assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockDate: true })))
+    assert.ok(!Model.isDefault({ clockDate: true }))
+  },
+  "clockLayout puts the date under or beside the time, whichever keeps it bigger"() {
+    const plain = (w, h) => Model.clockLayout("12:34", w, h).cell
+    // A tall top edge: under the time, at full size.
+    const tall = Model.clockLayout("12:34", 1080, 660, true)
+    assert.equal(tall.date, "under")
+    assert.equal(tall.cell, plain(1080, 660))
+    assert.ok((tall.spanRows + 2) * tall.cell <= 660)
+    // A short edge on a portrait monitor gives up some size for it.
+    const short = Model.clockLayout("12:34", 1080, 460, true)
+    assert.equal(short.date, "under")
+    assert.ok(short.cell >= plain(1080, 460) * Model.DATE_KEEP)
+    // A short wide strip: beside the time, which keeps its size.
+    for (const [w, h] of [[2560, 160], [2560, 300], [3440, 400]]) {
+      const strip = Model.clockLayout("12:34", w, h, true)
+      assert.equal(strip.date, "beside", `${w}x${h}`)
+      assert.equal(strip.cell, plain(w, h))
+      assert.ok((strip.spanColumns + 2) * strip.cell <= w)
+      assert.equal(strip.dateBox.x, strip.columns + Model.DATE_GAP)
+    }
+    // Where neither keeps most of the time's size, no date.
+    assert.equal(Model.clockLayout("12:34", 400, 150, true).date, "")
+    // The place holds whatever the time: a narrow 12-hour "3:24" does not
+    // lose the date that "12:34" has.
+    assert.equal(Model.clockLayout("3:24", 1080, 460, true).date, "under")
+    for (const text of ["1:05", "9:59", "10:00", "12:59"]) assert.equal(Model.clockLayout(text, 2560, 160, true).date, "beside")
+    // Without asking, never.
+    assert.equal(Model.clockLayout("12:34", 1080, 660).date, "")
+    assert.equal(Model.clockLayout("12:34", 1080, 660).dateBox, null)
   },
   "clockBitmap lays glyphs out with a gap"() {
     const one = Model.clockBitmap("1")
@@ -187,6 +274,19 @@ const tests = {
     assert.equal(tall.rows, 11)
     assert.equal(tall.cell, 56)
     assert.ok(Model.clockLayout("12:34", 30, 20).cell < 2)
+  },
+  "a 12-hour clock keeps its size and shape all day"() {
+    // DP-4's top edge, with and without the date, and a size where "1:05"
+    // alone would go on one line and "12:59" on two.
+    for (const [w, h, dated] of [[1440, 590, false], [1440, 590, true], [120, 100, false], [648, 300, true]]) {
+      const shapes = ["1:05", "9:59", "10:00", "12:59"].map(text => Model.clockLayout(text, w, h, dated))
+      for (const layout of shapes) {
+        for (const key of ["cell", "columns", "rows", "spanColumns", "spanRows", "date"]) assert.equal(layout[key], shapes[3][key], `${w}x${h} ${key}`)
+        assert.ok(layout.cells.every(c => c.x >= 0 && c.x < layout.columns), `${w}x${h} inside`)
+      }
+    }
+    // The narrower time is centered: "1:05" starts two blocks in.
+    assert.equal(Math.min(...Model.clockLayout("1:05", 1440, 590).cells.map(c => c.x)), 2)
   },
   "clockShift moves every 5 minutes within one cell"() {
     assert.deepEqual({ ...Model.clockShift(new Date(2026, 8, 29, 0, 4)) }, { x: 0, y: 0 })
@@ -384,7 +484,7 @@ const tests = {
   "fit trims hand-edited entries to the shared limit"() {
     const fitted = Model.fit(Model.normalize({ top: 5000, bottom: 400, left: 100, right: 100 }), 1080, 1920)
     const { panels, ...edges } = fitted
-    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
+    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
     const kept = Model.fit(Model.normalize({ top: 400, bottom: 200 }), 1080, 1920)
     assert.equal(kept.top, 400)
     assert.equal(kept.bottom, 200)

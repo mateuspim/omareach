@@ -157,6 +157,11 @@ QtObject {
     if (Model.CLOCK_EDGES.indexOf(clockEdge) === -1) return
     update(output, { clockEdge: clockEdge })
   }
+  function setClockHours(output, hours) {
+    if (Model.CLOCK_HOURS.indexOf(hours) === -1) return
+    update(output, { clockHours: hours })
+  }
+  function setClockDate(output, on) { update(output, { clockDate: on === true }) }
 
   // Saves every monitor's entry as profile `name`, replacing one of that
   // name. Returns the name it saved under, or "" for a blank name.
@@ -248,7 +253,7 @@ QtObject {
     var next = Object.assign({}, outputs)
     delete next[key]
     delete next[output]
-    var kept = { fill: current.fill, clockEdge: current.clockEdge, dim: current.dim, panels: current.panels }
+    var kept = { fill: current.fill, clockEdge: current.clockEdge, clockHours: current.clockHours, clockDate: current.clockDate, dim: current.dim, panels: current.panels }
     if (!Model.isDefault(kept)) next[key] = kept
     outputs = next
     saveTimer.restart()

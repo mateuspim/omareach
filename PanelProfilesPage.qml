@@ -15,6 +15,40 @@ Column {
   // Puts the cursor in the name field, for the `s` key.
   function focusField() { profileField.forceActiveFocus() }
 
+  // --- keyboard cursor (Panel.pageKey) ----------------------------------------
+  // The chips as they wrap, then the name field, Auto and Save. The chips
+  // keep their own widths, so their rows are read off where they landed.
+  readonly property int fieldAt: panel.profileNames.length
+  readonly property var chipRows: {
+    var rows = [], lastY = null
+    for (var i = 0; i < chips.count; i++) {
+      var chip = chips.itemAt(i)
+      if (!chip) continue
+      if (chip.y !== lastY) { rows.push(0); lastY = chip.y }
+      rows[rows.length - 1]++
+    }
+    return rows
+  }
+  readonly property var cursorRows: chipRows.concat([3])
+  readonly property var cursorKeys: panel.profileNames.map(function(n) { return "profile:" + n }).concat(["field", "auto", "save"])
+  readonly property int cursorHome: Math.max(0, panel.profileNames.indexOf(panel.reserve.currentProfile))
+  function cursorOn(index) { return panel.page === "profiles" && panel.pageCursor === index }
+  function activate(index, alt) {
+    if (index < fieldAt) {
+      if (alt) panel.deleteProfile(panel.profileNames[index])
+      else panel.applyProfile(panel.profileNames[index])
+    } else if (index === fieldAt) focusField()
+    else if (index === fieldAt + 1) autoButton.toggle()
+    else if (index === fieldAt + 2) saveProfileButton.save()
+  }
+  // Deleting can be undone, like a right click. Returns where the cursor
+  // goes: the next profile, or the field once none is left.
+  function remove(index) {
+    if (index >= fieldAt) return index
+    panel.deleteProfile(panel.profileNames[index])
+    return Math.min(index, fieldAt)
+  }
+
   PanelSectionHeader {
     text: "PROFILES"
     foreground: page.panel.foreground
@@ -35,6 +69,7 @@ Column {
     width: parent.width
     spacing: Style.spacing.md
     Repeater {
+      id: chips
       model: page.panel.profileNames
       Button {
         required property string modelData
@@ -46,6 +81,7 @@ Column {
           + (page.panel.reserve.autoProfiles[modelData] ? "\nApplied by itself with " + page.panel.reserve.autoProfiles[modelData].join(", ") : "")
           + "\nRight click to delete"
         selected: page.panel.reserve.currentProfile === modelData
+        hasCursor: page.cursorOn(index)
         bordered: true
         foreground: page.panel.foreground
         fontFamily: page.panel.fontFamily
@@ -64,6 +100,8 @@ Column {
       anchors.rightMargin: Style.spacing.md
       anchors.verticalCenter: parent.verticalCenter
       placeholderText: "Profile name"
+      // The cursor shows on the field until Enter puts the caret in it.
+      hasCursor: page.cursorOn(page.fieldAt)
       // The Panel owns the name, so applying a profile or reopening the
       // panel can set it.
       text: page.panel.profileDraft
@@ -85,13 +123,15 @@ Column {
       enabled: existing !== ""
       opacity: enabled ? 1 : 0.4
       selected: enabled && page.panel.reserve.isAuto(existing)
+      hasCursor: page.cursorOn(page.fieldAt + 1)
+      function toggle() { if (enabled) page.panel.reserve.setAuto(existing, !selected) }
       bordered: true
       foreground: page.panel.foreground
       fontFamily: page.panel.fontFamily
       tooltipText: !enabled ? "Name a saved profile to apply it by itself when these monitors connect"
         : selected ? existing + " applies by itself whenever exactly these monitors connect. Click to stop"
         : "Apply " + existing + " by itself whenever exactly these monitors connect: " + page.panel.screenNames.join(", ")
-      onClicked: { page.panel.reserve.setAuto(existing, !selected); page.panel.refocus() }
+      onClicked: { toggle(); page.panel.refocus() }
     }
     Button {
       id: saveProfileButton
@@ -103,11 +143,13 @@ Column {
       iconText: "󰆓"
       enabled: name !== ""
       opacity: enabled ? 1 : 0.4
+      hasCursor: page.cursorOn(page.fieldAt + 2)
+      function save() { if (enabled) page.panel.saveProfile(profileField.text) }
       bordered: true
       foreground: page.panel.foreground
       fontFamily: page.panel.fontFamily
       tooltipText: existing ? "Save every monitor as it is now over " + existing : "Save every monitor as it is now under this name"
-      onClicked: { page.panel.saveProfile(profileField.text); page.panel.refocus() }
+      onClicked: { save(); page.panel.refocus() }
     }
   }
   // What the buttons above do, which their names alone don't say.
@@ -115,7 +157,7 @@ Column {
     width: parent.width
     textFormat: Text.PlainText
     wrapMode: Text.WordWrap
-    text: "A profile holds every monitor's edges and fill; 1 – 9 apply one. Auto applies it by itself whenever exactly these monitors connect. Right-click a profile to delete it."
+    text: "A profile holds every monitor's edges and fill; 1 – 9 apply one. Auto applies it by itself whenever exactly these monitors connect. Right-click a profile, or X on it, to delete it; U undoes that."
     color: page.panel.subtle
     font.family: page.panel.fontFamily
     font.pixelSize: Style.font.caption

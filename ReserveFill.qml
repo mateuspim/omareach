@@ -20,6 +20,10 @@ Rectangle {
   property real dim: Model.DIM_DEFAULT / 100
   property color logoColor: Commons.Color.foreground
   property color clockColor: Commons.Color.accent
+  // The clock's hours (24 or 12), and whether it shows the date under the
+  // time where the edge is tall enough.
+  property int clockHours: 24
+  property bool clockDate: false
   // The stats fill's panels, and how many strip pixels one screen pixel
   // takes up: 1 on the monitor, the preview's scale in the panel.
   property var panels: []
@@ -105,16 +109,17 @@ Rectangle {
     }
   }
 
-  // A 24-hour clock in big blocky digits, always upright: one line on a
-  // wide strip, hours over minutes on a tall one. It ticks on the minute
-  // and moves a few pixels every few minutes, against burn-in.
+  // A clock in big blocky digits, always upright: one line on a wide
+  // strip, hours over minutes on a tall one, and the date under or beside
+  // it where there is room. It ticks on the minute and moves a few pixels every few
+  // minutes, against burn-in.
   Item {
     id: clock
-    readonly property var layout: Model.clockLayout(Model.clockText(fill.now), fill.width, fill.height)
+    readonly property var layout: Model.clockLayout(Model.clockText(fill.now, fill.clockHours), fill.width, fill.height, fill.clockDate)
     readonly property real cell: layout.cell
     visible: fill.mode === "clock" && cell >= 1
-    width: layout.columns * cell
-    height: layout.rows * cell
+    width: layout.spanColumns * cell
+    height: layout.spanRows * cell
     // A twelfth of a block per step: enough to spread the wear, too little
     // to look off-center.
     x: Math.round((fill.width - width) / 2 + fill.shift.x * cell / 12)
@@ -134,6 +139,27 @@ Rectangle {
         height: clock.cell
         color: fill.clockColor
       }
+    }
+
+    // In the font rather than in blocks: the glyphs have no letters. It
+    // fills its box under or beside the time, and shrinks to its width.
+    Text {
+      textFormat: Text.PlainText
+      readonly property var box: clock.layout.dateBox || ({ x: 0, y: 0, width: 0, height: 0 })
+      visible: clock.layout.date !== ""
+      x: box.x * clock.cell
+      y: Math.round(box.y * clock.cell)
+      width: box.width * clock.cell
+      height: box.height * clock.cell
+      horizontalAlignment: clock.layout.date === "beside" ? Text.AlignLeft : Text.AlignHCenter
+      verticalAlignment: Text.AlignVCenter
+      text: visible ? Qt.formatDate(fill.now, "ddd d MMM") : ""
+      color: fill.clockColor
+      font.family: Style.font.family
+      font.bold: true
+      font.pixelSize: Math.max(1, Math.round(height * 0.8))
+      fontSizeMode: Text.HorizontalFit
+      minimumPixelSize: 6
     }
   }
 

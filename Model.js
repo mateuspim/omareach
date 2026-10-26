@@ -26,6 +26,8 @@ var RETIRED_PANELS = { fans: "temps", pressure: "" }
 // Where the clock fill goes: the largest reserved edge, or the larger of
 // the top and bottom edges.
 var CLOCK_EDGES = ["largest", "topBottom"]
+// The clock fill's hours: 24-hour, or 12-hour without a leading zero.
+var CLOCK_HOURS = [24, 12]
 // How dark the dimmed fill makes the wallpaper, in percent.
 var DIM_DEFAULT = 60
 var DIM_MIN = 10
@@ -66,6 +68,8 @@ function normalize(raw) {
     enabled: entry.enabled !== false,
     fill: FILLS.indexOf(entry.fill) !== -1 ? entry.fill : "black",
     clockEdge: CLOCK_EDGES.indexOf(entry.clockEdge) !== -1 ? entry.clockEdge : "largest",
+    clockHours: CLOCK_HOURS.indexOf(entry.clockHours) !== -1 ? entry.clockHours : 24,
+    clockDate: entry.clockDate === true,
     dim: dimPercent(entry.dim),
     panels: panelList(entry.panels)
   }
@@ -155,6 +159,49 @@ function rowCells(count, columns, index) {
   return index >= lastRow ? count - lastRow : columns
 }
 
+// The row lengths of `count` cells laid out `columns` to a row, the last
+// row taking the rest: what gridMove walks for one such grid.
+function gridRows(count, columns) {
+  var rows = []
+  for (var left = count; left > 0; left -= columns) rows.push(Math.min(columns, left))
+  return rows
+}
+
+// Where the keyboard cursor goes after a button acted: back onto the
+// button it was on, found by `key` among the page's `keys` now, since what
+// it did may have added or taken away buttons before it; else onto
+// `fallback` (an added stats panel's place among those shown); else the
+// same place, kept on the page. -1 on a page with no buttons.
+function cursorAfter(keys, key, index, fallback) {
+  if (!keys.length) return -1
+  var found = keys.indexOf(key)
+  if (found === -1 && fallback) found = keys.indexOf(fallback)
+  return found !== -1 ? found : clamp(index, 0, keys.length - 1)
+}
+
+// Where the keyboard cursor goes from cell `index` of a page whose cells
+// run in rows of `rows[i]` cells, `dx` cells along a row or `dy` rows up
+// or down. Along a row it stops at the ends; between rows it lands on the
+// cell under the middle of the one it left, since rows differ in length
+// and stretch across. Off the grid (-1, or past the end after cells went
+// away) it starts from the first cell or the last.
+function gridMove(rows, index, dx, dy) {
+  var total = rows.reduce(function(sum, length) { return sum + length }, 0)
+  if (total === 0) return -1
+  if (index < 0) return 0
+  if (index >= total) return total - 1
+  var row = 0, start = 0
+  while (index >= start + rows[row]) start += rows[row++]
+  var column = index - start
+  if (dx) return start + clamp(column + dx, 0, rows[row] - 1)
+  var target = clamp(row + dy, 0, rows.length - 1)
+  if (target === row) return index
+  var middle = (column + 0.5) / rows[row]
+  var targetStart = 0
+  for (var i = 0; i < target; i++) targetStart += rows[i]
+  return targetStart + Math.min(rows[target] - 1, Math.floor(middle * rows[target]))
+}
+
 function panelName(panel) {
   return PANEL_NAMES[panel] || title(String(panel))
 }
@@ -169,6 +216,7 @@ function active(raw) {
 // Whether two normalized entries reserve, enable and fill the same.
 function same(a, b) {
   if (a.enabled !== b.enabled || a.fill !== b.fill || a.clockEdge !== b.clockEdge || a.dim !== b.dim) return false
+  if (a.clockHours !== b.clockHours || a.clockDate !== b.clockDate) return false
   if (String(a.panels) !== String(b.panels)) return false
   for (var i = 0; i < EDGES.length; i++) if (a[EDGES[i]] !== b[EDGES[i]]) return false
   return true
@@ -285,9 +333,12 @@ var CLOCK_CELLS = (function() {
   return 4 * most + GLYPHS[":"].join("").split("#").length - 1
 })()
 
-// 24-hour HH:MM.
-function clockText(date) {
-  return ("0" + date.getHours()).slice(-2) + ":" + ("0" + date.getMinutes()).slice(-2)
+// HH:MM in 24-hour time, or H:MM in 12-hour time (`hours` 12), where a
+// leading zero would only read as a 24-hour clock.
+function clockText(date, hours) {
+  var minutes = ":" + ("0" + date.getMinutes()).slice(-2)
+  if (hours === 12) return String(date.getHours() % 12 || 12) + minutes
+  return ("0" + date.getHours()).slice(-2) + minutes
 }
 
 // The lit cells of `lines` (a string or an array of them) in GLYPHS, with
@@ -323,14 +374,57 @@ function clockBitmap(lines) {
 // The clock for a strip of `width` by `height`, always upright: HH:MM on one
 // line, or HH over MM when that gives bigger blocks, as on a side edge.
 // `cell` is the block size, leaving a block of margin all round; whole
-// pixels once they are 2 or more.
-function clockLayout(text, width, height) {
+// pixels once they are 2 or more. `spanColumns` by `spanRows` is all it
+// takes, in blocks.
+//
+// With `dated`, a line of date goes with the time where there is room:
+// under it (DATE_ROWS rows: a blank one and three of text) or, on a short
+// wide strip whose height limits the time, beside it (a gap of DATE_GAP
+// and DATE_COLUMNS columns), whichever keeps the bigger clock. `date` is
+// "under", "beside", or "" where neither keeps DATE_KEEP of the time's
+// size; `dateBox` is where its text goes, in blocks.
+var DATE_ROWS = 4
+var DATE_GAP = 2
+// "Sat 24 Oct" at three blocks high; a longer name shrinks to fit.
+var DATE_COLUMNS = 15
+var DATE_KEEP = 0.7
+function clockLayout(text, width, height, dated) {
+  // Sized for the widest time, so a 12-hour clock keeps its size and its
+  // shape through the day: "1:05" is narrower than "12:59", and sized on
+  // its own it grew at 1:00 and shrank at 10:00. The digits showing are
+  // centered in the room the widest would take.
+  var room = bestClock("00:00", width, height, dated ? datePlace(width, height) : "")
+  var parts = String(text).split(":")
+  var shown = clockBitmap(room.rows > 5 ? parts : text)
+  var left = Math.floor((room.columns - shown.columns) / 2)
+  room.cells = shown.cells.map(function(c) { return { x: c.x + left, y: c.y } })
+  return room
+}
+
+// Where the date goes on a strip, decided for the widest time rather than
+// the one showing: "1:05" is narrower than "12:59", and the date must not
+// come and go as the hours change.
+function datePlace(width, height) {
+  var plain = bestClock("00:00", width, height, "")
+  var under = bestClock("00:00", width, height, "under")
+  var beside = bestClock("00:00", width, height, "beside")
+  var best = beside.cell > under.cell ? beside : under
+  return best.cell >= plain.cell * DATE_KEEP ? best.date : ""
+}
+
+function bestClock(text, width, height, date) {
   var parts = String(text).split(":")
   var best = null
   var options = [clockBitmap(text), clockBitmap(parts)]
   for (var i = 0; i < options.length; i++) {
     var option = options[i]
-    option.cell = Math.max(0, Math.min(width / (option.columns + 2), height / (option.rows + 2)))
+    option.date = date
+    option.spanColumns = option.columns + (date === "beside" ? DATE_GAP + DATE_COLUMNS : 0)
+    option.spanRows = option.rows + (date === "under" ? DATE_ROWS : 0)
+    option.dateBox = date === "under" ? { x: 0, y: option.rows + 1, width: option.columns, height: DATE_ROWS - 1 }
+      : date === "beside" ? { x: option.columns + DATE_GAP, y: (option.rows - 3) / 2, width: DATE_COLUMNS, height: 3 }
+      : null
+    option.cell = Math.max(0, Math.min(width / (option.spanColumns + 2), height / (option.spanRows + 2)))
     if (!best || option.cell > best.cell) best = option
   }
   if (best.cell >= 2) best.cell = Math.floor(best.cell)

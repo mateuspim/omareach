@@ -20,7 +20,7 @@ with history graphs and meters:
 | Disks | Read and write per disk with the peak of the last minute, NVMe temperatures (unless Sensors is shown), and how long tasks stalled on I/O while they do | `/proc/diskstats`, NVMe hwmon, `/proc/pressure` |
 | Processes | The programs using the most CPU, memory and video memory, processes of one name added up; a small card keeps the top one of each | `/proc/<pid>/stat`, `nvidia-smi` |
 | Sensors | The temperatures no other panel on the dashboard shows (the CPU and its dies, the GPUs, NVMe drives, memory modules), each against its own limit, led by the hottest for its limit, then the fans | hwmon, sysfs, `nvidia-smi` |
-| Battery | A laptop's battery with the time left, a bar of its level, its draw, energy, health and charge cycles; peripherals such as a wireless mouse or Bluetooth headphones, the emptiest leading when there is no laptop battery, each with its meter and a mark while it charges; without a battery it takes no card | `/sys/class/power_supply`, the shell's UPower devices |
+| Battery | A laptop's battery with the time left, a bar of its level, its draw, energy, health and charge cycles; peripherals such as a wireless mouse or Bluetooth headphones, the emptiest leading when there is no laptop battery, each with its meter and a mark while it charges, and named by its kind ("Mouse", "Headset") unless two share one (hover for its model); without a battery it takes no card | `/sys/class/power_supply`, the shell's UPower devices |
 | Now playing | The track playing, with its cover and progress | the shell's MPRIS players |
 | System | Like fastfetch: Omarchy's icon beside the uptime, OS, Omarchy version and update channel, host, kernel, CPU, GPUs, memory, packages, shell, desktop, theme, load and threads | `/proc`, `/sys`, `/etc/os-release`, pacman's database |
 
@@ -82,17 +82,23 @@ at a glance, from a distance:
 ## Panels
 
 The **Stats** page of the panel lists the panels this monitor shows, in
-order, with buttons to move each earlier or later; the dashboard lays
-them out in that order and leaves them off from the end when the edge
-runs out of room. A shown panel the dashboard does not draw says why:
-"doesn't fit" when the edge runs out of room, "not on this machine" for
-an iGPU panel without a second GPU or a Battery panel without a battery
-(which **Add** leaves out, and the count leaves out too). **✕** (or
-clicking the panel) hides it; click one under **Add** to show it last.
-Right-click either to do the same on every monitor. The
-page's **Every monitor** part sets the Animation and CPU power (below)
-for every dashboard. Without the Stats fill, the page offers to switch
-to it.
+order, two to a row; the dashboard lays them out in that order and
+leaves them off from the end when the edge runs out of room. Click a
+panel to select it, then **Earlier**, **Later** or **Hide** below the
+list act on it. A shown panel the dashboard does not draw is dimmed, and
+the line under the buttons says why when it is selected: "doesn't fit"
+when the edge runs out of room, "not on this machine" for an iGPU panel
+without a second GPU or a Battery panel without a battery (which **Add**
+leaves out, and the count leaves out too). Click one under **Add** to
+show it last. Right-click Hide, or one under Add, to do the same on every
+monitor; right-clicking a shown panel only selects it. The page's **Every monitor** row sets the Animation
+and CPU power (below) for every dashboard. Without the Stats fill, the
+page offers to switch to it.
+
+From the keyboard, the arrows (or `h` `j` `k` `l`) walk the page and
+select the panel they reach; Shift with an arrow moves it earlier or
+later, `x` or Delete hides it, and Enter presses the button under the
+cursor.
 
 The System panel's facts barely change, so it keeps the same text lit in
 the same place all day; on an OLED panel, leave it off or last.
@@ -165,6 +171,6 @@ firmware and stall the CPU for a moment, are read every 5 seconds.
 
 The graphs scroll and the meters ease between samples at 30 frames a
 second by default, and the dashboard redraws only as often. The
-Animation button on the Stats page (or `pace`) sets it for every monitor:
+Animation list on the Stats page (or `pace`) sets it for every monitor:
 the display's own rate for the smoothest motion, 60, 30 or 15 fps, or no
 animation, which redraws once a second.

@@ -17,6 +17,8 @@ The shell answers IPC calls on the target `pym.omareach`, through
 | `panel <monitor> <panel> <on\|off\|"">` | Show or hide one stats panel; `""` switches it over |
 | `nextFill <monitor>` | Next fill, as `f` in the panel |
 | `dim <monitor> <percent>` | How dark the dimmed fill is, 10 to 90 |
+| `clockHours <monitor> <12\|24>` | The clock fill in 12- or 24-hour time |
+| `clockDate <monitor> <on\|off>` | The date under or beside the clock, where the edge has room |
 | `edge <monitor> <side> <pixels>` | Reserve `pixels` on `top`, `bottom`, `left` or `right` |
 | `aspect <monitor> <ratio> <place>` | An aspect preset: `16:9`, `4:3`, any `w:h`; `top`, `left`, `center`, `bottom`, `right`, or `""` to keep the current place |
 | `ruler <monitor>` | Show or hide the ruler |

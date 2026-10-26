@@ -36,6 +36,8 @@ user-facing summary; this page is the exact behaviour.
 | `fill` | monitor, fill | Fill by key or label, ignoring case: `black`, `theme`, `logo`, `wallpaper`, `dim` (or `dimmed`), `clock`, `stats`. Unknown: `Unknown fill <x>; one of black, theme, logo, wallpaper, dim, clock, stats`. Without reserved edges it still sets the fill and answers `<Fill>  ·  no reserved edges to show it`. |
 | `nextFill` | monitor | The next fill in the order above, wrapping. |
 | `dim` | monitor, percent | Dimmed fill's darkness, clamped to 10 to 90. Answers `Dim <n>%`. |
+| `clockHours` | monitor, hours | The clock fill's hours, `12` or `24`. Answers `Clock  ·  <n>-hour`; other numbers `Say 12 or 24`. |
+| `clockDate` | monitor, `on` or `off` | The date under or beside the clock, where the edge has room for it. Answers `Clock date  ·  on` or `off`; other states `Say on or off`. |
 | `panels` | monitor, list | Stats panels as a comma list, in the order the dashboard shows them, `all`, or `none` (or `""`). Names are keys, labels or aliases (below). Unknown: `Unknown panel in <list>; one of …`. Answers `Stats: <names>`, plus `  ·  shown with the stats fill` when the monitor's fill is not `stats`. |
 | `panel` | monitor, panel, state | One panel `on` (it goes last), `off`, or `""` to flip it. Other states: `Say on or off`. Answers as `panels`. |
 | `edge` | monitor, side, pixels | `top`, `bottom`, `left` or `right`, clamped to 0 and the side's budget (90% of the axis, less the opposite edge). Unknown side: `Unknown edge <x>; one of top, bottom, left, right`. |
@@ -73,7 +75,7 @@ at most 32 characters, matched exactly and then ignoring case.
   "autoProfiles": { "Desk": ["DP-5", "Dell Inc. DELL U2720Q 1A2B3C4"] },
   "monitors": ["DP-5", "Dell Inc. DELL U2720Q 1A2B3C4"],
   "outputs": {
-    "DP-4": { "enabled": true, "fill": "stats", "clockEdge": "largest", "dim": 60, "panels": ["gpu", "cpu", "memory", "network"], "top": 660, "bottom": 0, "left": 0, "right": 0 }
+    "DP-4": { "enabled": true, "fill": "stats", "clockEdge": "largest", "clockHours": 24, "clockDate": false, "dim": 60, "panels": ["gpu", "cpu", "memory", "network"], "top": 660, "bottom": 0, "left": 0, "right": 0 }
   }
 }
 ```

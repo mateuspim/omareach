@@ -12,6 +12,12 @@ Item {
   id: ruler
   property color color: Commons.Color.accent
   property string fontFamily: Style.font.family
+  // The labels follow the shell's font size; the band under them grows to
+  // hold the widest one ("1000" at most, on a 2000 px edge).
+  readonly property int labelSize: Style.font.body
+  TextMetrics { id: widest; text: "0000"; font.family: ruler.fontFamily; font.pixelSize: ruler.labelSize; font.bold: true }
+  readonly property real bandBeyond: 18 + Math.ceil(widest.width) + 10
+  readonly property real bandBelow: 3 + Math.ceil(widest.height) + 4
 
   Repeater {
     model: Model.EDGES
@@ -37,8 +43,8 @@ Item {
         readonly property real start: Math.min(edgeScale.position(0), edgeScale.position(edgeScale.length))
         x: edgeScale.vertical ? edgeScale.middle - 20 : start
         y: edgeScale.vertical ? start : edgeScale.middle - 20
-        width: edgeScale.vertical ? 76 : edgeScale.length + 1
-        height: edgeScale.vertical ? edgeScale.length + 1 : 40
+        width: edgeScale.vertical ? 20 + ruler.bandBeyond : edgeScale.length + 1
+        height: edgeScale.vertical ? edgeScale.length + 1 : 20 + ruler.bandBelow
         color: "black"
         opacity: 0.55
       }
@@ -69,7 +75,7 @@ Item {
           text: modelData.label
           color: ruler.color
           font.family: ruler.fontFamily
-          font.pixelSize: 12
+          font.pixelSize: ruler.labelSize
           font.bold: true
           x: edgeScale.vertical ? edgeScale.middle + 18 : edgeScale.position(modelData.at) - Math.round(implicitWidth / 2)
           y: edgeScale.vertical ? edgeScale.position(modelData.at) - Math.round(implicitHeight / 2) : edgeScale.middle + 3

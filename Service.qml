@@ -43,10 +43,10 @@ Scope {
         return beside ? Model.fullscreenFill(shown) : shown
       }
 
-      ReservedEdge { screen: output.modelData; side: "top"; pixels: output.edge.top; fill: output.fillFor("top"); dim: output.edge.dim; panels: output.edge.panels }
-      ReservedEdge { screen: output.modelData; side: "bottom"; pixels: output.edge.bottom; fill: output.fillFor("bottom"); dim: output.edge.dim; panels: output.edge.panels }
-      ReservedEdge { screen: output.modelData; side: "left"; pixels: output.edge.left; fill: output.fillFor("left"); dim: output.edge.dim; panels: output.edge.panels }
-      ReservedEdge { screen: output.modelData; side: "right"; pixels: output.edge.right; fill: output.fillFor("right"); dim: output.edge.dim; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "top"; pixels: output.edge.top; fill: output.fillFor("top"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "bottom"; pixels: output.edge.bottom; fill: output.fillFor("bottom"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "left"; pixels: output.edge.left; fill: output.fillFor("left"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "right"; pixels: output.edge.right; fill: output.fillFor("right"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
     }
   }
 
@@ -181,6 +181,21 @@ Scope {
       return root.each(output, function(name) {
         root.state.setDim(name, percent)
         return "Dim " + root.state.edges(name).dim + "%"
+      })
+    }
+    // The clock fill's hours, 12 or 24, and its date "on" or "off".
+    function clockHours(output: string, hours: int): string {
+      if (Model.CLOCK_HOURS.indexOf(hours) === -1) return "Say 12 or 24"
+      return root.each(output, function(name) {
+        root.state.setClockHours(name, hours)
+        return "Clock  ·  " + hours + "-hour"
+      })
+    }
+    function clockDate(output: string, state: string): string {
+      if (state !== "on" && state !== "off") return "Say on or off"
+      return root.each(output, function(name) {
+        root.state.setClockDate(name, state === "on")
+        return "Clock date  ·  " + state
       })
     }
     // The stats panels, as a comma list of names, "all" or "none".
@@ -328,6 +343,8 @@ Scope {
     required property int pixels
     required property string fill
     required property int dim
+    required property int clockHours
+    required property bool clockDate
     required property var panels
     active: pixels > 0
 
@@ -360,6 +377,8 @@ Scope {
           side: reserved.side
           mode: reserved.fill
           dim: reserved.dim / 100
+          clockHours: reserved.clockHours
+          clockDate: reserved.clockDate
           panels: reserved.panels
           size: reserved.pixels
           screenWidth: reserved.screen.width

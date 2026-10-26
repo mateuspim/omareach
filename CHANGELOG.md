@@ -1,5 +1,48 @@
 # Changelog
 
+## 1.9.0 — 2026-10-26
+
+### Added
+
+- **Keyboard on every page:** on the Fill, Stats and Profiles pages the
+  arrows (or `h` `j` `k` `l`) move a cursor over the page's buttons,
+  Enter presses the one under it and Shift+Enter right-clicks it. On the
+  Stats page Shift with an arrow moves the selected panel and `x` hides
+  it; on the Profiles page `x` deletes a profile, which `u` undoes. The
+  Dim slider moves with left and right. The Edges page keeps its keys.
+- **Clock options:** 12-hour time, and the date under the clock, or
+  beside it on a short wide edge, wherever the time keeps most of its
+  size. Per monitor, on the
+  Fill page and over IPC (`clockHours`, `clockDate`).
+
+### Changed
+
+- **A shorter Stats page:** shown panels sit two to a row, and one row of
+  Earlier, Later and Hide acts on the selected one, so ten panels take
+  about 795 px instead of 985. Animation is a list rather than a button
+  that cycles, and shares its row with CPU power.
+- **Larger text on short strips:** wide cards need 8 units of height
+  rather than 10, so a 2560×160 strip keeps 16 px text instead of 13, with
+  a row fewer. They still need 22 units of width, so cards two to a row
+  on a narrow portrait strip keep text that fits. A wide card's headline leaves out what has no room (the
+  per-core bars first) rather than squeezing it.
+- **Fill buttons are all one width**, with a short last row centered.
+- **Wide cards** keep their rows within 32 units, so a label stays near
+  its value; the graphs take the rest.
+- **The ruler's labels** follow the shell's font size.
+- **Right-clicking a shown stats panel** selects it rather than hiding it
+  on every monitor, which was easy to do by mistake; Hide's right-click
+  still hides it everywhere.
+- **Battery devices by kind:** a peripheral reads "Mouse" or "Headset",
+  as UPower knows it, rather than a model name a narrow card cut to
+  "G50…"; two of a kind keep their names. Hovering one shows its model.
+- **Hover for the rest:** a label, caption or line on a stats card that is
+  cut short shows in full on hover.
+
+### Fixed
+
+- The Stats page counted panels this machine can't show ("10 of 9").
+
 ## 1.8.0 — 2026-10-24
 
 ### Added

@@ -48,6 +48,8 @@ Item {
         side: modelData
         mode: Model.edgeFill(panel.edge, modelData)
         dim: panel.edge.dim / 100
+        clockHours: panel.edge.clockHours
+        clockDate: panel.edge.clockDate
         panels: panel.edge.panels
         pixelRatio: preview.ratio
         size: panel.edge[modelData] * preview.ratio
