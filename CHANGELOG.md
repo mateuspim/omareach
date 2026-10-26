@@ -30,6 +30,9 @@
 - **Wide cards** keep their rows within 32 units, so a label stays near
   its value; the graphs take the rest.
 - **The ruler's labels** follow the shell's font size.
+- **Battery devices by kind:** a peripheral reads "Mouse" or "Headset",
+  as UPower knows it, rather than a model name a narrow card cut to
+  "G50…"; two of a kind keep their names.
 
 ### Fixed
 

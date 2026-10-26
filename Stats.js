@@ -292,7 +292,7 @@ function parsePower(lines) {
     if (design === null || held === null) { design = number(s.charge_full_design, 1); held = number(s.charge_full, 1) }
     var cycles = number(s.cycle_count, 1)
     result.push({
-      id: id, name: s.model_name || id, device: s.scope === "Device", status: s.status || "",
+      id: id, name: s.model_name || id, kind: "", device: s.scope === "Device", status: s.status || "",
       capacity: number(s.capacity, 1), level: s.capacity_level || "", power: power, energy: energy, full: full,
       health: design > 0 && held !== null ? Math.min(100, held / design * 100) : null,
       // Batteries that do not count their cycles report 0.
@@ -305,8 +305,9 @@ function parsePower(lines) {
 // Peripherals' batteries from UPower's devices ({ nativePath, model, type,
 // powerSupply, percentage 0 to 1, state }, with type and state by name),
 // in parsePower's shape. UPower knows batteries the kernel does not list,
-// such as Bluetooth headsets'. Power supplies (a laptop's battery) and
-// devices without a name are left out.
+// such as Bluetooth headsets', and what kind of device each is ("Mouse",
+// "Gaming input"), which the kernel does not say. Power supplies (a
+// laptop's battery) and devices without a name are left out.
 // `devices` can be array-like, as Quickshell's lists are; the result is an
 // array.
 function upowerBatteries(devices) {
@@ -316,12 +317,21 @@ function upowerBatteries(devices) {
     var d = devices[i]
     if (!d || d.powerSupply || !d.nativePath || d.type === "Unknown" || d.type === "LinePower") continue
     result.push({
-      id: String(d.nativePath), name: String(d.model || d.type), device: true, status: d.state === "Unknown" ? "" : String(d.state || ""),
+      id: String(d.nativePath), name: String(d.model || d.type), kind: deviceKind(d.type), device: true, status: d.state === "Unknown" ? "" : String(d.state || ""),
       capacity: Math.round(Number(d.percentage || 0) * 100), level: "", power: null, energy: null, full: null,
       health: null, cycles: null
     })
   }
   return result
+}
+
+// UPower's type for a peripheral as words ("GamingInput" is "Gaming
+// input"), or "" for the types that name no device.
+function deviceKind(type) {
+  type = String(type || "")
+  if (!type || /^(Unknown|Battery|LinePower|Ups)$/.test(type)) return ""
+  var words = type.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 // The battery that leads the battery panel: the laptop's, or else the
@@ -877,10 +887,14 @@ function gpuRoles(state) {
 function step(state, text, gpuLine, media, batteries) {
   var next = ingest(state, parseFrame(text))
   // UPower's peripherals, when the battery panel is shown, after the
-  // kernel's (which come first for the same device).
+  // kernel's (which come first for the same device, taking the kind of
+  // device UPower knows it as).
   if (batteries) {
     var known = next.power.map(function(b) { return b.id })
-    var power = next.power.slice()
+    var power = next.power.map(function(kernel) {
+      var same = batteries.filter(function(b) { return b.id === kernel.id && b.kind })[0]
+      return same ? Object.assign({}, kernel, { kind: same.kind }) : kernel
+    })
     for (var b = 0; b < batteries.length; b++) if (known.indexOf(batteries[b].id) === -1) power.push(batteries[b])
     next.power = power
   }

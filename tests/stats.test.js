@@ -210,12 +210,12 @@ const tests = {
       "hidpp_battery_0\ttype\tBattery", "hidpp_battery_0\tscope\tDevice", "hidpp_battery_0\tcapacity_level\tLow", "hidpp_battery_0\tmodel_name\tMX Keys"
     ])
     assert.deepEqual(plain(supplies.map(s => s.id)), ["BAT0", "BAT1", "hidpp_battery_0"])
-    assert.deepEqual(plain(supplies[0]), { id: "BAT0", name: "BAT0", device: false, status: "Discharging", capacity: 81, level: "", power: 12.5, energy: 40, full: 50, health: null, cycles: null })
+    assert.deepEqual(plain(supplies[0]), { id: "BAT0", name: "BAT0", kind: "", device: false, status: "Discharging", capacity: 81, level: "", power: 12.5, energy: 40, full: 50, health: null, cycles: null })
     // Charge and current, as some batteries report, times the voltage.
     assert.equal(supplies[1].power, 24)
     assert.equal(supplies[1].energy, 24)
     assert.equal(supplies[1].full, 48)
-    assert.deepEqual(plain(supplies[2]), { id: "hidpp_battery_0", name: "MX Keys", device: true, status: "", capacity: null, level: "Low", power: null, energy: null, full: null, health: null, cycles: null })
+    assert.deepEqual(plain(supplies[2]), { id: "hidpp_battery_0", name: "MX Keys", kind: "", device: true, status: "", capacity: null, level: "Low", power: null, energy: null, full: null, health: null, cycles: null })
   },
   "parsePower reads a battery's health and cycles"() {
     const [energy, charge, uncounted] = Stats.parsePower([
@@ -1165,10 +1165,12 @@ Object.assign(tests, {
       { nativePath: "", model: "", type: "Unknown", powerSupply: false, percentage: 0, state: "Unknown" }
     ]
     const batteries = plain(Stats.upowerBatteries(devices))
-    assert.deepEqual(batteries.map(b => [b.id, b.name, b.capacity, b.device]), [
-      ["hidpp_battery_0", "Logitech G502 X LS", 63, true],
-      ["/org/bluez/hci0/dev_08_F0_B6_67_89_F3", "EDIFIER W830NB", 70, true]
+    assert.deepEqual(batteries.map(b => [b.id, b.name, b.kind, b.capacity, b.device]), [
+      ["hidpp_battery_0", "Logitech G502 X LS", "Mouse", 63, true],
+      ["/org/bluez/hci0/dev_08_F0_B6_67_89_F3", "EDIFIER W830NB", "Headset", 70, true]
     ])
+    assert.equal(Stats.deviceKind("GamingInput"), "Gaming input")
+    assert.equal(Stats.deviceKind("Battery"), "")
     assert.deepEqual(plain(Stats.upowerBatteries(null)), [])
     // Quickshell's lists are array-like, not arrays; a real array comes out.
     const listLike = { length: 2, 0: devices[0], 1: devices[1] }
@@ -1183,9 +1185,17 @@ Object.assign(tests, {
     ])
     const state = Stats.step(Stats.empty(), frame(10, [0]), [], undefined, extra)
     assert.deepEqual(plain(state.power.map(b => b.name)), ["G502 X LIGHTSPEED", "EDIFIER W830NB"])
+    // The kernel's entry takes the kind UPower knows the same device as.
+    assert.deepEqual(plain(state.power.map(b => b.kind)), ["Mouse", "Headset"])
+    // One of each kind: named by kind, which a narrow card has room for.
     const view = Views.view("battery", state, palette)
-    assert.equal(view.caption, "G502 X LIGHTSPEED")
-    assert.deepEqual(plain(view.rows.map(row => [row.label, row.text])), [["EDIFIER W830NB", "70%"]])
+    assert.equal(view.caption, "Mouse")
+    assert.deepEqual(plain(view.rows.map(row => [row.label, row.text])), [["Headset", "70%"]])
+    // Two of a kind keep their names.
+    const second = Object.assign({}, extra[0], { id: "hid2", name: "MX Master 3S", capacity: 90 })
+    const two = Views.view("battery", Stats.step(Stats.empty(), frame(10, [0]), [], undefined, extra.concat([second])), palette)
+    assert.equal(two.caption, "G502 X LIGHTSPEED")
+    assert.deepEqual(plain(two.rows.map(row => row.label)), ["Headset", "MX Master 3S"])
     // A headset alone leads.
     const alone = Stats.step(Stats.empty(), frame(10, [0]).replace(/@power[\s\S]*?@drm/, "@power\n@drm"), [], undefined, extra.slice(1))
     assert.equal(Views.view("battery", alone, palette).value, "70%")

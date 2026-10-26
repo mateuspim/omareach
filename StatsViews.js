@@ -570,6 +570,14 @@ var VIEWS = {
     function draining(b) { return b.status === "Discharging" || (b.device && !charging(b) && !/^Full/.test(b.status)) }
     function color(p) { return Stats.gradientAt(g.level, 1 - (p || 0) / 100) }
     function hours(h) { return Math.floor(h) + "h " + Math.floor(h * 60) % 60 + "m" }
+    // A device by its kind ("Mouse", "Headset") while no other shares it:
+    // shorter than a model name ("Logitech G502 X LIGHTSPEED"), which a
+    // narrow card cut to "G50…", and plainer. Two of a kind keep their
+    // names, as does a device whose kind is unknown.
+    function label(b) {
+      var same = b.kind ? devices.filter(function(d) { return d.kind === b.kind }).length : 0
+      return same === 1 ? b.kind : b.name
+    }
     // Low and not on a charger: the card asks for attention, louder as it
     // empties, the laptop's and every peripheral's alike.
     var lowest = null
@@ -597,7 +605,7 @@ var VIEWS = {
       if (laptop.health > 0) v.rows.push(row("Health", Stats.formatPercent(laptop.health), laptop.health / 100, color(laptop.health)))
       if (laptop.cycles > 0) v.rows.push(row("Cycles", String(laptop.cycles), null))
     } else {
-      v.caption = lead.name + (charging(lead) ? "  ·  charging" : "")
+      v.caption = label(lead) + (charging(lead) ? "  ·  charging" : "")
       v.info = devices.length > 1 ? devices.length + " devices" : ""
       // What the device says of itself, where it says anything the caption
       // does not ("charging").
@@ -605,12 +613,12 @@ var VIEWS = {
     }
     // How low the emptiest draining battery is, in words, while the card
     // warns; named when it is not the one leading the card.
-    if (lowest) v.note = (lowest === lead ? "" : lowest.name + " ") + ["", "low", "very low", "critical"][v.alert]
+    if (lowest) v.note = (lowest === lead ? "" : label(lowest) + " ") + ["", "low", "very low", "critical"][v.alert]
     devices.forEach(function(d) {
       // The peripheral leading the panel is not listed again.
       if (d === lead) return
       var p = percent(d)
-      v.rows.push(row(d.name, (p !== null ? Stats.formatPercent(p) : d.level || "—") + (charging(d) ? " " + CHARGING : ""),
+      v.rows.push(row(label(d), (p !== null ? Stats.formatPercent(p) : d.level || "—") + (charging(d) ? " " + CHARGING : ""),
         p === null ? null : p / 100, color(p)))
     })
   },
