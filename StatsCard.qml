@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls
 import QtQuick.Layouts
 import qs.Commons
 import "." as Reserve
@@ -123,6 +124,8 @@ Item {
       color: card.theme.subtle
       font.family: card.fontFamily
       font.pixelSize: Math.round(card.unit * 0.8)
+      HoverHandler { id: infoHover }
+      CardTip { shown: infoHover.hovered && infoText.truncated; text: card.shown.info }
     }
   }
 
@@ -197,6 +200,7 @@ Item {
           font.bold: true
         }
         Text {
+          id: captionText
           textFormat: Text.PlainText
           Layout.alignment: Qt.AlignBottom
           Layout.bottomMargin: Math.round(card.unit * 0.3)
@@ -206,15 +210,20 @@ Item {
           color: card.theme.subtle
           font.family: card.fontFamily
           font.pixelSize: Math.round(card.unit * 0.8)
+          HoverHandler { id: captionHover }
+          CardTip { shown: captionHover.hovered; text: card.shown.captionTip || (captionText.truncated ? card.shown.caption : "") }
         }
       }
       // What the caption had no room for (a wide card's sensor name), or
       // how low a battery is, in the warning's color.
       Text {
+        id: noteText
         textFormat: Text.PlainText
         visible: card.shown.note !== ""
         Layout.fillWidth: true
         elide: Text.ElideRight
+        HoverHandler { id: noteHover }
+        CardTip { shown: noteHover.hovered && noteText.truncated; text: card.shown.note }
         text: card.shown.note
         color: card.alert ? card.outline : card.theme.subtle
         font.family: card.fontFamily
@@ -349,6 +358,7 @@ Item {
           fraction: modelData.fraction
           barColor: modelData.color || card.shown.color
           swatch: modelData.swatch === true
+          tip: modelData.tip || ""
           labelWidth: card.unit * 5.5
         }
       }
@@ -499,6 +509,30 @@ Item {
     font.pixelSize: card.unit
   }
 
+  // Hover text over the strip, in the card's own look: what a label names
+  // in full, or the rest of one cut short. The strips are layer surfaces
+  // of their own, so the tip opens inside the strip it belongs to.
+  component CardTip: ToolTip {
+    id: cardTip
+    property bool shown: false
+    visible: shown && text !== ""
+    delay: 300
+    padding: Math.round(card.unit * 0.45)
+    background: Rectangle {
+      color: "black"
+      border.color: card.outline
+      border.width: card.line
+      radius: Math.round(card.unit * 0.3)
+    }
+    contentItem: Text {
+      textFormat: Text.PlainText
+      text: cardTip.text
+      color: card.theme.foreground
+      font.family: card.fontFamily
+      font.pixelSize: Math.round(card.unit * 0.9)
+    }
+  }
+
   // Label, a meter when there is a fraction, and the value on the right.
   // With `labelFills` the label takes the free width and the meter a fixed
   // one, as in the process lists.
@@ -513,6 +547,8 @@ Item {
     property real meterWidth: 0
     // A square of barColor before the label: the key to a stacked bar.
     property bool swatch: false
+    // Shown on hover over the row, as is a label cut short.
+    property string tip: ""
     readonly property bool hasMeter: fraction !== null && fraction !== undefined
     // A meter row of the card's rows that lines up with the others; one
     // whose value is too long for the card's value column has no meter.
@@ -585,5 +621,7 @@ Item {
       font.pixelSize: Math.round(card.unit * 0.9)
       font.bold: true
     }
+    HoverHandler { id: rowHover }
+    CardTip { shown: rowHover.hovered; text: statRow.tip || (rowLabel.truncated ? statRow.label : "") }
   }
 }

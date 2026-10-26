@@ -98,7 +98,7 @@ var ICONS = {
 var TITLES = { gpu: "GPU", igpu: "iGPU", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes" }
 
 function row(label, text, fraction, color) {
-  return { label: label, text: text, fraction: fraction === null || fraction === undefined ? null : Math.max(0, Math.min(1, fraction)), color: color || "", swatch: false }
+  return { label: label, text: text, fraction: fraction === null || fraction === undefined ? null : Math.max(0, Math.min(1, fraction)), color: color || "", swatch: false, tip: "" }
 }
 
 // A row with no meter whose label carries a square of `color`: the key to
@@ -193,7 +193,8 @@ function graphMax(values, floor) {
 // optional label), per-core bars (a `gap` entry splits them into groups),
 // a stacked bar of `stack` parts, label/value rows with meters and ranked
 // lists. `note` is a line under the headline, for what its caption has no
-// room for. `alert` asks for the card's warning color, 0 for none to
+// room for. `captionTip`, and a row's `tip`, say in full what they name,
+// shown on hover. `alert` asks for the card's warning color, 0 for none to
 // CRITICAL. `empty` replaces the
 // content with a message. `room` is how many rows the card has space for,
 // for panels whose lists can grow to fill it, `wide` whether its rows sit
@@ -204,7 +205,7 @@ function view(panel, state, palette, room, wide, span, shown) {
   var g = palette.gradients
   var result = {
     title: TITLES[panel] || panel, icon: ICONS[panel] || "", color: palette.boxes[panel] || palette.accent,
-    info: "", value: "", valueColor: palette.foreground, caption: "", note: "",
+    info: "", value: "", valueColor: palette.foreground, caption: "", captionTip: "", note: "",
     graphs: [], bars: [], stack: [], rows: [], lists: [], empty: "", logo: false, alert: 0
   }
   var build = VIEWS[panel]
@@ -606,6 +607,7 @@ var VIEWS = {
       if (laptop.cycles > 0) v.rows.push(row("Cycles", String(laptop.cycles), null))
     } else {
       v.caption = label(lead) + (charging(lead) ? "  ·  charging" : "")
+      v.captionTip = label(lead) === lead.name ? "" : lead.name
       v.info = devices.length > 1 ? devices.length + " devices" : ""
       // What the device says of itself, where it says anything the caption
       // does not ("charging").
@@ -618,8 +620,11 @@ var VIEWS = {
       // The peripheral leading the panel is not listed again.
       if (d === lead) return
       var p = percent(d)
-      v.rows.push(row(label(d), (p !== null ? Stats.formatPercent(p) : d.level || "—") + (charging(d) ? " " + CHARGING : ""),
-        p === null ? null : p / 100, color(p)))
+      var deviceRow = row(label(d), (p !== null ? Stats.formatPercent(p) : d.level || "—") + (charging(d) ? " " + CHARGING : ""),
+        p === null ? null : p / 100, color(p))
+      // Which headset it is, on hover: a kind alone does not say.
+      if (deviceRow.label !== d.name) deviceRow.tip = d.name
+      v.rows.push(deviceRow)
     })
   },
 

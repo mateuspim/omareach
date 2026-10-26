@@ -1191,11 +1191,17 @@ Object.assign(tests, {
     const view = Views.view("battery", state, palette)
     assert.equal(view.caption, "Mouse")
     assert.deepEqual(plain(view.rows.map(row => [row.label, row.text])), [["Headset", "70%"]])
+    // Which mouse and which headset, in full on hover.
+    assert.equal(view.captionTip, "G502 X LIGHTSPEED")
+    assert.deepEqual(plain(view.rows.map(row => row.tip)), ["EDIFIER W830NB"])
     // Two of a kind keep their names.
     const second = Object.assign({}, extra[0], { id: "hid2", name: "MX Master 3S", capacity: 90 })
     const two = Views.view("battery", Stats.step(Stats.empty(), frame(10, [0]), [], undefined, extra.concat([second])), palette)
     assert.equal(two.caption, "G502 X LIGHTSPEED")
     assert.deepEqual(plain(two.rows.map(row => row.label)), ["Headset", "MX Master 3S"])
+    // A name shown already needs no tip.
+    assert.equal(two.captionTip, "")
+    assert.equal(two.rows[1].tip, "")
     // A headset alone leads.
     const alone = Stats.step(Stats.empty(), frame(10, [0]).replace(/@power[\s\S]*?@drm/, "@power\n@drm"), [], undefined, extra.slice(1))
     assert.equal(Views.view("battery", alone, palette).value, "70%")

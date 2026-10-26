@@ -32,7 +32,9 @@
 - **The ruler's labels** follow the shell's font size.
 - **Battery devices by kind:** a peripheral reads "Mouse" or "Headset",
   as UPower knows it, rather than a model name a narrow card cut to
-  "G50…"; two of a kind keep their names.
+  "G50…"; two of a kind keep their names. Hovering one shows its model.
+- **Hover for the rest:** a label, caption or line on a stats card that is
+  cut short shows in full on hover.
 
 ### Fixed
 
