@@ -325,13 +325,16 @@ function upowerBatteries(devices) {
   return result
 }
 
-// UPower's type for a peripheral as words ("GamingInput" is "Gaming
-// input"), or "" for the types that name no device.
+// UPower's type for a peripheral as a plain word, or "" for a type that
+// says nothing a person would call the device ("BluetoothGeneric", "Pda",
+// "OtherAudio"), which keeps its model name instead.
+var DEVICE_KINDS = {
+  Mouse: "Mouse", Keyboard: "Keyboard", Headset: "Headset", Headphones: "Headphones", Speakers: "Speakers",
+  GamingInput: "Controller", Tablet: "Tablet", Phone: "Phone", Pen: "Pen", Touchpad: "Touchpad",
+  RemoteControl: "Remote", Wearable: "Wearable", Toy: "Toy", MediaPlayer: "Media player", Camera: "Camera"
+}
 function deviceKind(type) {
-  type = String(type || "")
-  if (!type || /^(Unknown|Battery|LinePower|Ups)$/.test(type)) return ""
-  var words = type.replace(/([a-z])([A-Z])/g, "$1 $2").toLowerCase()
-  return words.charAt(0).toUpperCase() + words.slice(1)
+  return DEVICE_KINDS[String(type || "")] || ""
 }
 
 // The battery that leads the battery panel: the laptop's, or else the

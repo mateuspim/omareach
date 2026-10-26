@@ -67,6 +67,13 @@ Column {
       ? Model.gridRows(shown.length, shownGrid.columns).concat(shown.length ? [3] : [], Model.gridRows(hidden.length, addGrid.columns))
       : [1])
     .concat([cpuPowerShown ? 2 : 1])
+  readonly property var cursorKeys: (active
+      ? shown.map(function(p) { return "shown:" + p }).concat(shown.length ? ["earlier", "later", "hide"] : [], hidden.map(function(p) { return "add:" + p }))
+      : ["use"])
+    .concat(["pace"], cpuPowerShown ? ["cpu"] : [])
+  // A panel just added moves from Add to the shown ones; the cursor goes
+  // with it.
+  function cursorFallback(key) { return key.indexOf("add:") === 0 ? "shown:" + key.slice(4) : "" }
   readonly property int cursorHome: active && selectedIndex >= 0 ? selectedIndex : 0
   function cursorOn(index) { return panel.page === "stats" && panel.pageCursor === index }
   // Reaching a shown panel with the cursor selects it.
@@ -79,10 +86,10 @@ Column {
   }
   function activate(index, alt) {
     if (!active && index === 0) { panel.setFill("stats"); return }
-    if (active && index < toolbarAt) {
-      if (alt) panel.togglePanelEverywhere(shown[index])
-      else picked = shown[index]
-    } else if (active && index < addAt) {
+    // Selecting is all a shown panel does, right-click too: hiding it on
+    // every monitor from a slip was too easy. Hide's right-click does that.
+    if (active && index < toolbarAt) picked = shown[index]
+    else if (active && index < addAt) {
       if (index === toolbarAt) moveSelected(-1)
       else if (index === toolbarAt + 1) moveSelected(1)
       else hideSelected(alt)
@@ -167,9 +174,9 @@ Column {
         foreground: page.panel.foreground
         fontFamily: page.panel.fontFamily
         tooltipText: Model.panelName(modelData) + (missing ? "  ·  " + missing : "")
-          + "\nClick to select it for the buttons below  ·  Right click hides it on every monitor"
+          + "\nClick to select it for the buttons below"
         onClicked: { page.picked = modelData; page.panel.refocus() }
-        onRightClicked: { page.panel.togglePanelEverywhere(modelData); page.panel.refocus() }
+        onRightClicked: { page.picked = modelData; page.panel.refocus() }
       }
     }
   }

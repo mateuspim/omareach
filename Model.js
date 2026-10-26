@@ -167,6 +167,18 @@ function gridRows(count, columns) {
   return rows
 }
 
+// Where the keyboard cursor goes after a button acted: back onto the
+// button it was on, found by `key` among the page's `keys` now, since what
+// it did may have added or taken away buttons before it; else onto
+// `fallback` (an added stats panel's place among those shown); else the
+// same place, kept on the page. -1 on a page with no buttons.
+function cursorAfter(keys, key, index, fallback) {
+  if (!keys.length) return -1
+  var found = keys.indexOf(key)
+  if (found === -1 && fallback) found = keys.indexOf(fallback)
+  return found !== -1 ? found : clamp(index, 0, keys.length - 1)
+}
+
 // Where the keyboard cursor goes from cell `index` of a page whose cells
 // run in rows of `rows[i]` cells, `dx` cells along a row or `dy` rows up
 // or down. Along a row it stops at the ends; between rows it lands on the
@@ -377,7 +389,16 @@ var DATE_GAP = 2
 var DATE_COLUMNS = 15
 var DATE_KEEP = 0.7
 function clockLayout(text, width, height, dated) {
-  return bestClock(text, width, height, dated ? datePlace(width, height) : "")
+  // Sized for the widest time, so a 12-hour clock keeps its size and its
+  // shape through the day: "1:05" is narrower than "12:59", and sized on
+  // its own it grew at 1:00 and shrank at 10:00. The digits showing are
+  // centered in the room the widest would take.
+  var room = bestClock("00:00", width, height, dated ? datePlace(width, height) : "")
+  var parts = String(text).split(":")
+  var shown = clockBitmap(room.rows > 5 ? parts : text)
+  var left = Math.floor((room.columns - shown.columns) / 2)
+  room.cells = shown.cells.map(function(c) { return { x: c.x + left, y: c.y } })
+  return room
 }
 
 // Where the date goes on a strip, decided for the widest time rather than

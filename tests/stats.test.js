@@ -1169,8 +1169,10 @@ Object.assign(tests, {
       ["hidpp_battery_0", "Logitech G502 X LS", "Mouse", 63, true],
       ["/org/bluez/hci0/dev_08_F0_B6_67_89_F3", "EDIFIER W830NB", "Headset", 70, true]
     ])
-    assert.equal(Stats.deviceKind("GamingInput"), "Gaming input")
+    assert.equal(Stats.deviceKind("GamingInput"), "Controller")
     assert.equal(Stats.deviceKind("Battery"), "")
+    // Types no one calls a device by keep the model name.
+    for (const type of ["BluetoothGeneric", "Pda", "OtherAudio", "Unknown", undefined]) assert.equal(Stats.deviceKind(type), "")
     assert.deepEqual(plain(Stats.upowerBatteries(null)), [])
     // Quickshell's lists are array-like, not arrays; a real array comes out.
     const listLike = { length: 2, 0: devices[0], 1: devices[1] }
@@ -1201,6 +1203,15 @@ Object.assign(tests, {
     assert.equal(wideView.noteTip, "G502 X LIGHTSPEED")
     const low = Object.assign({}, state, { power: state.power.map(b => b.kind === "Mouse" ? Object.assign({}, b, { capacity: 9, status: "Discharging" }) : b) })
     assert.equal(Views.view("battery", low, palette, 4, true).note, "Mouse  ·  very low")
+    // When another device is the low one, the lead keeps its name.
+    const other = Object.assign({}, state, { power: state.power.map(b => b.kind === "Mouse"
+      ? Object.assign({}, b, { capacity: 10, status: "Charging" })
+      : Object.assign({}, b, { capacity: 14, status: "Discharging" })) })
+    const both = Views.view("battery", other, palette, 4, true)
+    assert.equal(both.value, "10%")
+    assert.equal(both.note, "Mouse  ·  charging  ·  Headset low")
+    assert.equal(both.noteTip, "G502 X LIGHTSPEED  ·  EDIFIER W830NB")
+    assert.equal(Views.view("battery", other, palette).note, "Headset low")
     assert.deepEqual(plain(view.rows.map(row => row.tip)), ["EDIFIER W830NB"])
     // Two of a kind keep their names.
     const second = Object.assign({}, extra[0], { id: "hid2", name: "MX Master 3S", capacity: 90 })

@@ -90,8 +90,8 @@ the line under the buttons says why when it is selected: "doesn't fit"
 when the edge runs out of room, "not on this machine" for an iGPU panel
 without a second GPU or a Battery panel without a battery (which **Add**
 leaves out, and the count leaves out too). Click one under **Add** to
-show it last. Right-click a panel, Hide or one under Add to do the same
-on every monitor. The page's **Every monitor** row sets the Animation
+show it last. Right-click Hide, or one under Add, to do the same on every
+monitor; right-clicking a shown panel only selects it. The page's **Every monitor** row sets the Animation
 and CPU power (below) for every dashboard. Without the Stats fill, the
 page offers to switch to it.
 

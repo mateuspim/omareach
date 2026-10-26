@@ -619,11 +619,13 @@ var VIEWS = {
     }
     // How low the emptiest draining battery is, in words, while the card
     // warns; named when it is not the one leading the card.
-    // On the name's line in a wide card, after it when it is the lead's.
+    // After the lead's name in a wide card, which must still say whose the
+    // big number is: "Mouse  ·  charging  ·  Headset low".
     if (lowest) {
       var warning = ["", "low", "very low", "critical"][v.alert]
-      if (lowest !== lead) { v.note = label(lowest) + " " + warning; v.noteTip = label(lowest) === lowest.name ? "" : lowest.name }
-      else v.note = v.note ? v.note + "  ·  " + warning : warning
+      var low = lowest === lead ? warning : label(lowest) + " " + warning
+      v.note = v.note ? v.note + "  ·  " + low : low
+      if (lowest !== lead && label(lowest) !== lowest.name) v.noteTip = [v.noteTip, lowest.name].filter(Boolean).join("  ·  ")
     }
     devices.forEach(function(d) {
       // The peripheral leading the panel is not listed again.

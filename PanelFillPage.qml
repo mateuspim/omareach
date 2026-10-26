@@ -27,6 +27,8 @@ Column {
   readonly property int everyAt: optionsAt + (clock ? 2 : 0)
   readonly property var cursorRows: Model.gridRows(Model.FILLS.length, fillGrid.columns)
     .concat(dimmed ? [1] : [], single ? [2] : [], clock ? [2] : [], many ? [1] : [])
+  readonly property var cursorKeys: Model.FILLS.map(function(f) { return "fill:" + f })
+    .concat(dimmed ? ["dim"] : [], single ? ["edge:largest", "edge:topBottom"] : [], clock ? ["hours", "date"] : [], many ? ["every"] : [])
   readonly property int cursorHome: Model.FILLS.indexOf(edge.fill)
   function cursorOn(index) { return panel.page === "fill" && panel.pageCursor === index }
   function activate(index, alt) {

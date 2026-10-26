@@ -69,9 +69,10 @@ next to the edges, since a ruler on the screen measures something else.
 | `[` / `]` | Previous or next page |
 | `j` / `k`, ↓ / ↑ | Edges: select an edge. Other pages: move the cursor |
 | `h` / `l`, ← / → | Edges: shrink or grow it by 10 px (Shift: 100, Ctrl: 1). Other pages: move the cursor; on the Dim slider, move it by 5% |
-| `0`, Backspace, Delete | Zero the selected edge (`0` brings up Edges) |
+| `0` | Zero the selected edge; from another page it brings up Edges first |
+| Backspace, Delete | Edges: zero the selected edge. Other pages: as `x` |
 | Enter | Press the button under the cursor (Shift+Enter: right-click it, as in "every monitor") |
-| `x`, Delete, Backspace | Stats: hide the selected panel. Profiles: delete the profile under the cursor (`u` undoes it) |
+| `x` | Stats: hide the selected panel. Profiles: delete the profile under the cursor (`u` undoes it) |
 | Shift+`j` / `k` | Stats: move the selected panel later or earlier |
 | `u`, Ctrl+Z | Undo a Clear, a zeroed edge, a preset or a profile change |
 | Space, `p` | Pause or resume the monitor |

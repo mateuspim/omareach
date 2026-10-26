@@ -93,8 +93,8 @@ Panel {
   readonly property string cursorEdge: reserve.edgeNames[cursor]
   // Keyboard cursor over the buttons of the Fill, Stats and Profiles pages,
   // in reading order; -1 until a key moves it, so a mouse user sees none.
-  // Each page lists its rows' lengths in `cursorRows` and says what Enter
-  // does in `activate(index, alt)`.
+  // Each page lists its rows' lengths in `cursorRows`, a name for each
+  // button in `cursorKeys`, and says what Enter does in `activate(index, alt)`.
   property int pageCursor: -1
   onPageChanged: pageCursor = -1
   readonly property var pageView: page === "fill" ? fillPage
@@ -413,13 +413,23 @@ Panel {
     }
     if (key === Qt.Key_Return || key === Qt.Key_Enter) {
       if (pageCursor < 0) pageCursor = Model.gridMove(view.cursorRows, view.cursorHome, 0, 0)
-      else view.activate(pageCursor, shift)
-      // What it pressed may have taken buttons away.
-      pageCursor = Model.gridMove(view.cursorRows, pageCursor, 0, 0)
+      else {
+        // What it pressed may add or take away buttons before it: the
+        // cursor stays on the same button, not at the same place.
+        var pressed = view.cursorKeys[pageCursor]
+        view.activate(pageCursor, shift)
+        pageCursor = Model.cursorAfter(view.cursorKeys, pressed, pageCursor, view.cursorFallback ? view.cursorFallback(pressed) : "")
+      }
       return true
     }
     if (key === Qt.Key_X || key === Qt.Key_Delete || key === Qt.Key_Backspace) {
-      if (pageCursor >= 0 && view.remove) pageCursor = view.remove(pageCursor)
+      if (pageCursor < 0 || !view.remove) return true
+      // On Hide the cursor stays on Hide; on the panel or profile it took
+      // away, the page says where it goes (the next one).
+      var removing = view.cursorKeys[pageCursor]
+      var next = view.remove(pageCursor)
+      var kept = view.cursorKeys.indexOf(removing)
+      pageCursor = kept !== -1 ? kept : Model.cursorAfter(view.cursorKeys, "", next)
       return true
     }
     return false
@@ -615,9 +625,10 @@ Panel {
                 "[ / ]", "Previous / next page",
                 "J / K", "Edges: select edge  ·  other pages: move the cursor",
                 "H / L", "Edges: shrink / grow 10 px  ·  ⇧ 100  ·  Ctrl 1",
-                "0 / ⌫", "Zero edge",
+                "0", "Zero edge (brings up Edges)",
+                "⌫ / Del", "Edges: zero edge  ·  other pages: as X",
                 "Enter", "Press the button under the cursor  ·  ⇧ right-click it",
-                "X / Del", "Hide a stats panel, delete a profile",
+                "X", "Hide a stats panel, delete a profile",
                 "⇧ J / K", "Move a stats panel earlier / later",
                 "U / Ctrl Z", "Undo a clear, zero, preset or profile change",
                 "Space / P", "Pause monitor",

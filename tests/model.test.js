@@ -114,6 +114,19 @@ const tests = {
     assert.equal(Model.gridMove(rows, 12, 0, 1), 9)
     assert.equal(Model.gridMove([], 0, 0, 1), -1)
   },
+  "cursorAfter keeps the cursor on the button it pressed"() {
+    // Hide with three panels shown: one goes, and Hide moves up one place.
+    const before = ["shown:gpu", "shown:cpu", "shown:memory", "earlier", "later", "hide", "add:disks", "pace"]
+    const after = ["shown:gpu", "shown:cpu", "earlier", "later", "hide", "add:memory", "add:disks", "pace"]
+    assert.equal(Model.cursorAfter(after, before[5], 5), 4)
+    // An added panel is followed to its place among those shown.
+    const added = ["shown:gpu", "shown:cpu", "shown:memory", "shown:disks", "earlier", "later", "hide", "pace"]
+    assert.equal(Model.cursorAfter(added, "add:disks", 6, "shown:disks"), 3)
+    // Gone without a fallback: the same place, kept on the page.
+    assert.equal(Model.cursorAfter(["use", "pace"], "use", 0), 0)
+    assert.equal(Model.cursorAfter(["pace"], "hide", 5), 0)
+    assert.equal(Model.cursorAfter([], "hide", 5), -1)
+  },
   "the panel list counts in same and isDefault"() {
     assert.ok(!Model.same(Model.normalize({ panels: ["gpu"] }), Model.normalize({})))
     assert.ok(Model.same(Model.normalize({ panels: ["gpu", "cpu", "memory", "network"] }), Model.normalize({})))
@@ -261,6 +274,19 @@ const tests = {
     assert.equal(tall.rows, 11)
     assert.equal(tall.cell, 56)
     assert.ok(Model.clockLayout("12:34", 30, 20).cell < 2)
+  },
+  "a 12-hour clock keeps its size and shape all day"() {
+    // DP-4's top edge, with and without the date, and a size where "1:05"
+    // alone would go on one line and "12:59" on two.
+    for (const [w, h, dated] of [[1440, 590, false], [1440, 590, true], [120, 100, false], [648, 300, true]]) {
+      const shapes = ["1:05", "9:59", "10:00", "12:59"].map(text => Model.clockLayout(text, w, h, dated))
+      for (const layout of shapes) {
+        for (const key of ["cell", "columns", "rows", "spanColumns", "spanRows", "date"]) assert.equal(layout[key], shapes[3][key], `${w}x${h} ${key}`)
+        assert.ok(layout.cells.every(c => c.x >= 0 && c.x < layout.columns), `${w}x${h} inside`)
+      }
+    }
+    // The narrower time is centered: "1:05" starts two blocks in.
+    assert.equal(Math.min(...Model.clockLayout("1:05", 1440, 590).cells.map(c => c.x)), 2)
   },
   "clockShift moves every 5 minutes within one cell"() {
     assert.deepEqual({ ...Model.clockShift(new Date(2026, 8, 29, 0, 4)) }, { x: 0, y: 0 })

@@ -30,6 +30,7 @@ Column {
     return rows
   }
   readonly property var cursorRows: chipRows.concat([3])
+  readonly property var cursorKeys: panel.profileNames.map(function(n) { return "profile:" + n }).concat(["field", "auto", "save"])
   readonly property int cursorHome: Math.max(0, panel.profileNames.indexOf(panel.reserve.currentProfile))
   function cursorOn(index) { return panel.page === "profiles" && panel.pageCursor === index }
   function activate(index, alt) {

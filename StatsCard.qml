@@ -125,7 +125,7 @@ Item {
       font.family: card.fontFamily
       font.pixelSize: Math.round(card.unit * 0.8)
       HoverHandler { id: infoHover }
-      CardTip { shown: infoHover.hovered && infoText.truncated; text: card.shown.info }
+      LazyTip { shown: infoHover.hovered && infoText.truncated; text: card.shown.info }
     }
   }
 
@@ -211,7 +211,7 @@ Item {
           font.family: card.fontFamily
           font.pixelSize: Math.round(card.unit * 0.8)
           HoverHandler { id: captionHover }
-          CardTip { shown: captionHover.hovered; text: card.shown.captionTip || (captionText.truncated ? card.shown.caption : "") }
+          LazyTip { shown: captionHover.hovered; text: card.shown.captionTip || (captionText.truncated ? card.shown.caption : "") }
         }
       }
       // What the caption had no room for (a wide card's sensor name), or
@@ -223,7 +223,7 @@ Item {
         Layout.fillWidth: true
         elide: Text.ElideRight
         HoverHandler { id: noteHover }
-        CardTip { shown: noteHover.hovered; text: card.shown.noteTip || (noteText.truncated ? card.shown.note : "") }
+        LazyTip { shown: noteHover.hovered; text: card.shown.noteTip || (noteText.truncated ? card.shown.note : "") }
         text: card.shown.note
         color: card.alert ? card.outline : card.theme.subtle
         font.family: card.fontFamily
@@ -533,6 +533,22 @@ Item {
     }
   }
 
+  // A CardTip made only while its text is hovered: every row of every card
+  // has one, some hundred popups across a dashboard otherwise. A Loader
+  // takes only Items, so the tip comes in one.
+  component LazyTip: Loader {
+    id: lazyTip
+    property bool shown: false
+    property string text: ""
+    anchors.fill: parent
+    active: shown && text !== ""
+    sourceComponent: Component {
+      Item {
+        CardTip { shown: true; text: lazyTip.text }
+      }
+    }
+  }
+
   // Label, a meter when there is a fraction, and the value on the right.
   // With `labelFills` the label takes the free width and the meter a fixed
   // one, as in the process lists.
@@ -622,6 +638,6 @@ Item {
       font.bold: true
     }
     HoverHandler { id: rowHover }
-    CardTip { shown: rowHover.hovered; text: statRow.tip || (rowLabel.truncated ? statRow.label : "") }
+    LazyTip { shown: rowHover.hovered; text: statRow.tip || (rowLabel.truncated ? statRow.label : "") }
   }
 }
