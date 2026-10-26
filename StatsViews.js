@@ -133,6 +133,45 @@ function hot(temp, limit) {
   return temp !== null && temp !== undefined && limit > 0 && temp >= limit - ALERT_HEAT_MARGIN
 }
 
+// A mesh's row: its address when asked for, and how many of its peers
+// are online, as far as either is known; "on" with neither.
+function meshText(t) {
+  var parts = []
+  if (t.address) parts.push(t.address)
+  if (t.peers) parts.push(t.online + "/" + t.peers + " online")
+  return parts.join(" · ") || "on"
+}
+
+// Most peers a mesh's hover text lists before counting the rest.
+var MESH_TIP_PEERS = 8
+
+// The VPN row's hover text: each VPN, its interface and what its client
+// adds (the server, the protocol).
+function vpnTip(vpns) {
+  return vpns.map(function(t) {
+    return [t.place ? t.name + " · " + t.place : t.name].concat(t.details || [], [t.interface]).filter(function(line) { return line }).join("\n")
+  }).join("\n\n")
+}
+
+// A mesh row's hover text, when its client said more (Tailscale): this
+// machine's name and addresses, the exit node, then each peer, online
+// ones first. Hovering is asking, so the addresses show whatever the
+// Mesh addresses switch says.
+function meshTip(t) {
+  var status = t.status
+  if (!status || !status.self) return t.interface
+  var lines = [status.self.dns || status.self.name]
+  if (status.self.ips.length) lines.push(status.self.ips.join("  "))
+  if (status.exitNode) lines.push("Exit node: " + status.exitNode)
+  if (status.nodes.length) lines.push("")
+  status.nodes.slice(0, MESH_TIP_PEERS).forEach(function(node) {
+    var about = [node.os, node.online ? node.link : "offline"].filter(function(part) { return part }).join(", ")
+    lines.push((node.online ? "● " : "○ ") + node.name + (about ? "  " + about : ""))
+  })
+  if (status.nodes.length > MESH_TIP_PEERS) lines.push("and " + (status.nodes.length - MESH_TIP_PEERS) + " more")
+  return lines.join("\n")
+}
+
 // A temperature row, its meter filling from HEAT_FLOOR to the sensor's
 // limit, green through yellow to red like every level meter.
 function heatRow(label, temp, limit, g) {
@@ -412,6 +451,24 @@ var VIEWS = {
     // Keyed by the graphs' low color, which a line shows most of the time.
     v.rows.push(keyRow("Down", Stats.formatRate(n.rx), g.download[0]))
     v.rows.push(keyRow("Up", Stats.formatRate(n.tx), g.upload[0]))
+    // Ahead of the peaks and totals, which a short card drops first: whether
+    // traffic goes through a VPN is what someone glancing over checks.
+    // Green while one is on, red once it has gone off this session.
+    // Where it comes out, as its client tells vpn.sh: "Proton VPN · Miami, US".
+    if (n.vpn.length) {
+      var vpnRow = keyRow("VPN", n.vpn.map(function(t) { return t.place ? t.name + " · " + t.place : t.name }).join(", "), g.level[0])
+      vpnRow.tip = vpnTip(n.vpn)
+      v.rows.push(vpnRow)
+    }
+    else if (n.vpnSeen) v.rows.push(keyRow("VPN", "off", palette.alert))
+    // A mesh's address only comes when the panel's switch asks stats.sh
+    // for it (STATS_TUNNEL_ADDRESS); a VPN's inner address says nothing
+    // worth the room.
+    n.mesh.forEach(function(t) {
+      var meshRow = keyRow(t.name, meshText(t), g.upload[1])
+      meshRow.tip = meshTip(t)
+      v.rows.push(meshRow)
+    })
     v.rows.push(row("Peak", "↓ " + Stats.formatShort(rxMax) + "  ↑ " + Stats.formatShort(txMax), null))
     // Both totals since boot on one row, so a card short of rows never
     // shows one without the other.

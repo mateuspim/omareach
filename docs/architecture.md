@@ -21,7 +21,7 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
                               ▲      │                │                                     │
                      Panel ───┘      │                └─ fullscreen fitting (hyprctl, dispatch)
                      IPC  ───────────┘                                                      ▼
-                                     └─► StatsSampler ◄── stats.sh, nvidia-smi        StatsFill ─► StatsCard
+                                     └─► StatsSampler ◄── stats.sh, vpn.sh, nvidia-smi       StatsFill ─► StatsCard
 ```
 
 - **`ReserveState.qml`** (singleton) holds every monitor's settings,
@@ -72,7 +72,9 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   GPUs. It runs only while a monitor shows the stats fill or a panel
   previews it, pauses while idle, lets an idle dGPU rest
   ([ADR 7](adr/0007-let-an-idle-dgpu-rest.md)), and adds the shell's MPRIS
-  players and UPower devices. Its clock ticks at the animation pace.
+  players and UPower devices. Its clock ticks at the animation pace. While a
+  VPN or mesh tunnel is up it runs `vpn.sh` every 10 s and lays where each
+  goes over the frames.
 - **`Stats.js`** is the pure data side: parsing frames, counters into
   rates, history, the theme's palette from `colors.toml` and the text form
   of numbers. **`StatsViews.js`**, which imports it, is the pure drawing
@@ -81,6 +83,11 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
 - **`StatsFill.qml`** lays out the grid; **`StatsCard.qml`** draws one
   panel; **`StatsGraph.qml`** the scrolling history graphs;
   **`StatsEase.qml`** eases meters between samples.
+- **`vpn.sh`** asks the clients whose tunnels are up where they go: Proton's
+  server and city from its app's cache, `tailscale status --json`,
+  `nordvpn status`, `mullvad status`, `piactl get`, `ivpn status`,
+  `windscribe-cli status` and ExpressVPN's CLI; for a plain `tun0`, each
+  installed client that may own it.
 - **`cpu-power.sh`** reports whether the CPU's RAPL counter can be read and,
   from a visible terminal, opens or closes it as root
   ([ADR 8](adr/0008-cpu-power-through-a-visible-terminal.md)).

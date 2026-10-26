@@ -29,7 +29,8 @@ logo, a clock or a live btop-style system dashboard.
   (plain or dimmed), the Omarchy logo, a big blocky clock (24- or
   12-hour, with the date where it fits), or a live
   **stats dashboard** with 11 panels in the order you choose: GPU, CPU,
-  memory, network, disks, sensors, battery, now playing and more, with
+  memory, network (with the VPN you're on and where it comes out, and
+  Tailscale's peers), disks, sensors, battery, now playing and more, with
   meters against each part's own limit and a warning color you can see
   from across the room.
   [Fills](docs/guide/fills.md) · [The stats fill](docs/guide/stats-fill.md)

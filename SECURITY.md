@@ -22,11 +22,22 @@ This is what it does with that access:
   2 s while a wallpaper fill shows; `bash cpu-power.sh status` to see
   whether the CPU's power draw can be read; and, only while the stats fill
   shows (or the panel previews it), `stats.sh` (bash builtins reading
-  `/proc` and `/sys`, and `getconf PAGESIZE` once at start) and `nvidia-smi` where it is installed. CPU power
+  `/proc` and `/sys`, and `getconf PAGESIZE` once at start), `nvidia-smi` where it is installed, and,
+  only while the Stats page's **Mesh addresses** switch is on and a tunnel
+  is up, `ip -o -4 addr show` every 10 s for the tunnels' addresses; and,
+  while a VPN or mesh tunnel is up, `vpn.sh` every 10 s, which reads the
+  Proton app's cache and runs the status command of the clients whose
+  tunnels are up, read-only: `tailscale status --json`, `nordvpn status`,
+  `mullvad status`, `piactl get`, `ivpn status`, `windscribe-cli status`,
+  `expressvpnctl get` or `expressvpn status`. CPU power
   opens `omarchy-launch-floating-terminal-with-presentation` (below). The commands
   and their arguments are fixed; none is built from settings or IPC input.
 - **Reads:** `/proc` and `/sys` counters for the stats fill (sensors of a
   device the kernel put to sleep are skipped, since reading wakes it),
+  including which VPN or mesh tunnels are up (`/sys/class/net`,
+  `/proc/net/if_inet6`), the Proton VPN app's
+  `~/.cache/Proton/VPN/connection/connection_persistence.json` and
+  `serverlist.json` for its server and city,
   pacman's database and `/etc/os-release` for the System panel, libdrm's
   `amdgpu.ids` and hwdata's `pci.ids` for GPU names, the
   wallpaper through `~/.local/state/omarchy/current/background`, the

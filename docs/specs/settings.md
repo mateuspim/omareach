@@ -19,6 +19,7 @@ the contract for that file, taken from the code.
   },
   "idleBlack": 60,
   "statsPace": 0,
+  "statsTunnelAddress": true,
   "profiles": {
     "Desk": { "Dell Inc. DELL U2720Q 1A2B3C4": { "enabled": true, "top": 660, "bottom": 0, "left": 0, "right": 0, "fill": "stats", "clockEdge": "largest", "clockHours": 24, "clockDate": false, "dim": 60, "panels": ["gpu", "cpu", "memory", "network"] } }
   },
@@ -34,6 +35,7 @@ the contract for that file, taken from the code.
 | `outputs` | object | `{}` | One entry per monitor, by [monitor key](#monitor-keys). |
 | `idleBlack` | integer seconds | `0` (left out) | Every edge goes black after this long without input; `0` never. The panel offers 0, 30, 60 and 300; any whole number works. |
 | `statsPace` | integer 0 to 240 | `30` (left out) | Frames a second the dashboard's graphs and meters move at; `0` follows the display's refresh rate, `1` is no animation. Anything outside 0 to 240, or not a whole number, reads as 30. |
+| `statsTunnelAddress` | boolean | `false` (left out) | The Network card shows a mesh's (Tailscale's) IPv4 address on its row, ahead of the peers online. Anything but `true` reads as `false`. |
 | `profiles` | object | left out when empty | Profile name to a map of entries, shaped like `outputs`. |
 | `autoProfiles` | object | left out when empty | Profile name to the sorted list of monitor keys it applies with. |
 | `monitors` | array of strings | left out when empty | The monitor keys connected when the file was last saved. |
