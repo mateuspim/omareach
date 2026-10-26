@@ -193,8 +193,8 @@ function graphMax(values, floor) {
 // optional label), per-core bars (a `gap` entry splits them into groups),
 // a stacked bar of `stack` parts, label/value rows with meters and ranked
 // lists. `note` is a line under the headline, for what its caption has no
-// room for. `captionTip`, and a row's `tip`, say in full what they name,
-// shown on hover. `alert` asks for the card's warning color, 0 for none to
+// room for. `captionTip`, `noteTip` and a row's `tip` say in full what
+// they name, shown on hover. `alert` asks for the card's warning color, 0 for none to
 // CRITICAL. `empty` replaces the
 // content with a message. `room` is how many rows the card has space for,
 // for panels whose lists can grow to fill it, `wide` whether its rows sit
@@ -205,7 +205,7 @@ function view(panel, state, palette, room, wide, span, shown) {
   var g = palette.gradients
   var result = {
     title: TITLES[panel] || panel, icon: ICONS[panel] || "", color: palette.boxes[panel] || palette.accent,
-    info: "", value: "", valueColor: palette.foreground, caption: "", captionTip: "", note: "",
+    info: "", value: "", valueColor: palette.foreground, caption: "", captionTip: "", note: "", noteTip: "",
     graphs: [], bars: [], stack: [], rows: [], lists: [], empty: "", logo: false, alert: 0
   }
   var build = VIEWS[panel]
@@ -558,7 +558,7 @@ var VIEWS = {
   // Every battery: the laptop's, or else the emptiest peripheral's, leads
   // with a bar of its level and whether it charges; the rest are rows,
   // each with its meter. A laptop adds its draw, energy, health and cycles.
-  battery: function(v, state, palette, g) {
+  battery: function(v, state, palette, g, room, wide) {
     var laptop = state.power.filter(function(b) { return !b.device })[0]
     var devices = state.power.filter(function(b) { return b.device })
     if (!laptop && !devices.length) { v.empty = "No batteries"; return }
@@ -606,8 +606,12 @@ var VIEWS = {
       if (laptop.health > 0) v.rows.push(row("Health", Stats.formatPercent(laptop.health), laptop.health / 100, color(laptop.health)))
       if (laptop.cycles > 0) v.rows.push(row("Cycles", String(laptop.cycles), null))
     } else {
-      v.caption = label(lead) + (charging(lead) ? "  ·  charging" : "")
-      v.captionTip = label(lead) === lead.name ? "" : lead.name
+      // Beside the value a wide card's headline leaves the name about four
+      // letters ("Mou…"); the line under the value has the column's width.
+      var name = label(lead) + (charging(lead) ? "  ·  charging" : "")
+      var tip = label(lead) === lead.name ? "" : lead.name
+      if (wide) { v.note = name; v.noteTip = tip }
+      else { v.caption = name; v.captionTip = tip }
       v.info = devices.length > 1 ? devices.length + " devices" : ""
       // What the device says of itself, where it says anything the caption
       // does not ("charging").
@@ -615,7 +619,12 @@ var VIEWS = {
     }
     // How low the emptiest draining battery is, in words, while the card
     // warns; named when it is not the one leading the card.
-    if (lowest) v.note = (lowest === lead ? "" : label(lowest) + " ") + ["", "low", "very low", "critical"][v.alert]
+    // On the name's line in a wide card, after it when it is the lead's.
+    if (lowest) {
+      var warning = ["", "low", "very low", "critical"][v.alert]
+      if (lowest !== lead) { v.note = label(lowest) + " " + warning; v.noteTip = label(lowest) === lowest.name ? "" : lowest.name }
+      else v.note = v.note ? v.note + "  ·  " + warning : warning
+    }
     devices.forEach(function(d) {
       // The peripheral leading the panel is not listed again.
       if (d === lead) return

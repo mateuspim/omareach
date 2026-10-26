@@ -1193,6 +1193,14 @@ Object.assign(tests, {
     assert.deepEqual(plain(view.rows.map(row => [row.label, row.text])), [["Headset", "70%"]])
     // Which mouse and which headset, in full on hover.
     assert.equal(view.captionTip, "G502 X LIGHTSPEED")
+    // A wide card's headline is too narrow beside the value: the name goes
+    // on the line under it, with its tip, and a warning after it.
+    const wideView = Views.view("battery", state, palette, 4, true)
+    assert.equal(wideView.caption, "")
+    assert.equal(wideView.note, "Mouse")
+    assert.equal(wideView.noteTip, "G502 X LIGHTSPEED")
+    const low = Object.assign({}, state, { power: state.power.map(b => b.kind === "Mouse" ? Object.assign({}, b, { capacity: 9, status: "Discharging" }) : b) })
+    assert.equal(Views.view("battery", low, palette, 4, true).note, "Mouse  ·  very low")
     assert.deepEqual(plain(view.rows.map(row => row.tip)), ["EDIFIER W830NB"])
     // Two of a kind keep their names.
     const second = Object.assign({}, extra[0], { id: "hid2", name: "MX Master 3S", capacity: 90 })

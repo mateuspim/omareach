@@ -223,7 +223,7 @@ Item {
         Layout.fillWidth: true
         elide: Text.ElideRight
         HoverHandler { id: noteHover }
-        CardTip { shown: noteHover.hovered && noteText.truncated; text: card.shown.note }
+        CardTip { shown: noteHover.hovered; text: card.shown.noteTip || (noteText.truncated ? card.shown.note : "") }
         text: card.shown.note
         color: card.alert ? card.outline : card.theme.subtle
         font.family: card.fontFamily
