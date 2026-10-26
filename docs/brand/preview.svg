@@ -18,8 +18,8 @@
   <linearGradient id="panelFade" x1="0" y1="0" x2="0" y2="1">
     <stop offset=".66" stop-color="#fff"/><stop offset=".86" stop-color="#fff" stop-opacity="0"/>
   </linearGradient>
-  <mask id="panelMask" maskUnits="userSpaceOnUse" x="0" y="0" width="860" height="1606">
-    <rect width="860" height="1606" fill="url(#panelFade)"/>
+  <mask id="panelMask" maskUnits="userSpaceOnUse" x="0" y="0" width="860" height="1434">
+    <rect width="860" height="1434" fill="url(#panelFade)"/>
   </mask>
   <filter id="shadow" x="-.2" y="-.2" width="1.5" height="1.5"><feGaussianBlur stdDeviation="40"/></filter>
   <symbol id="mark" viewBox="0 0 24 24">
@@ -108,9 +108,9 @@
 
 <!-- The panel on its Stats page (captures/panel.png), fading out below the panels to add. -->
 <g transform="translate(3009 330) rotate(1.8) scale(.92)">
-  <rect x="20" y="40" width="860" height="1400" rx="20" fill="#000" opacity=".55" filter="url(#shadow)"/>
+  <rect x="20" y="40" width="860" height="1260" rx="20" fill="#000" opacity=".55" filter="url(#shadow)"/>
   <g mask="url(#panelMask)">
-    <image x="0" y="0" width="860" height="1606" href="captures/panel.png" xlink:href="captures/panel.png"/>
+    <image x="0" y="0" width="860" height="1434" href="captures/panel.png" xlink:href="captures/panel.png"/>
   </g>
 </g>
 </svg>

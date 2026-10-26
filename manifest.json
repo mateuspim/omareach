@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "pym.omareach",
   "name": "OmaReach",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "author": "Mateus Pim",
   "license": "MIT",
   "description": "Black out monitor edges you can't reach, like the top of a tall rotated screen, and keep the bar and tiled windows in the part you can, with optional fills, including a btop-style system dashboard.",

@@ -28,7 +28,7 @@ so every page works without a mouse; on Edges they move the edges.
 
 <p align="center">
   <img src="../panel-pages.png"
-       alt="The panel's four pages side by side: Edges with the edge sliders and aspect presets; Fill with the seven fills, Stats selected, where the stats go and Same on every monitor; Stats with GPU, CPU, Memory and Network shown in order with buttons to move them, the panels to add, and the Animation and CPU power buttons; Profiles with the Desk profile, the name field, Auto and Save">
+       alt="The panel's four pages side by side: Edges with the edge sliders and aspect presets; Fill with the seven fills, Stats selected, where the stats go and Same on every monitor; Stats with GPU, CPU, Memory and Network shown two to a row with Earlier, Later and Hide for the selected one, the panels to add, and the Animation list and CPU power button; Profiles with the Desk profile, the name field, Auto and Save">
 </p>
 
 - **Preview**: the monitor drawn to scale, with the black edges, the
