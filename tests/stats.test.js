@@ -626,6 +626,11 @@ const tests = {
     // 16 px text, not the 13 px that every row needed.
     assert.ok(strip.unit >= 16, String(strip.unit))
     assert.ok(Views.fit(["gpu", "cpu", "memory", "network"], 2560, 120).unit >= 12)
+    // A wide card needs room across too: two to a row on a 648 px
+    // portrait strip, the text shrinks until headline and rows fit.
+    const portrait = Views.fit(ALL_PANELS.slice(0, 10), 648, 750)
+    for (const card of portrait.cards) assert.ok(card.width >= Views.WIDE_SPAN * portrait.unit || card.width <= card.height * Views.WIDE_CARD, JSON.stringify(card))
+    assert.ok(portrait.unit <= 13, String(portrait.unit))
     // When nothing makes room, the smallest text still shows what fits.
     const tiny = Views.fit(ALL_PANELS, 600, 120)
     assert.equal(tiny.unit, 9)

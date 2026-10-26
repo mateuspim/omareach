@@ -23,7 +23,8 @@
   that cycles, and shares its row with CPU power.
 - **Larger text on short strips:** wide cards need 8 units of height
   rather than 10, so a 2560×160 strip keeps 16 px text instead of 13, with
-  a row fewer. A wide card's headline leaves out what has no room (the
+  a row fewer. They still need 22 units of width, so cards two to a row
+  on a narrow portrait strip keep text that fits. A wide card's headline leaves out what has no room (the
   per-core bars first) rather than squeezing it.
 - **Fill buttons are all one width**, with a short last row centered.
 - **Wide cards** keep their rows within 32 units, so a label stays near

@@ -26,9 +26,14 @@ var CARD_MIN_HEIGHT = 6
 var CARD_ROOM = 14
 var WIDE_ROOM = 8
 var WIDE_CARD = 2
+// Units of width a wide card needs for its headline and rows side by
+// side. Its height alone let a 300 px card on a portrait strip take 16 px
+// text, and every label and value was cut short.
+var WIDE_SPAN = 22
 
 function roomy(card, unit) {
-  return card.height >= (card.width > card.height * WIDE_CARD ? WIDE_ROOM : CARD_ROOM) * unit
+  if (card.width > card.height * WIDE_CARD) return card.height >= WIDE_ROOM * unit && card.width >= WIDE_SPAN * unit
+  return card.height >= CARD_ROOM * unit
 }
 
 // The layout with the largest text that keeps every panel and gives each
