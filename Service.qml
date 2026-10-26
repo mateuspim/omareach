@@ -156,7 +156,7 @@ Scope {
 
     function status(): string {
       var result = {
-        idleBlack: root.state.idleBlack, idle: root.idle, statsPace: root.state.statsPace, ruler: root.state.ruler,
+        idleBlack: root.state.idleBlack, idle: root.idle, statsPace: root.state.statsPace, statsTunnelAddress: root.state.statsTunnelAddress, ruler: root.state.ruler,
         profile: root.state.currentProfile, profiles: Model.profileNames(root.state.profiles),
         autoProfiles: root.state.autoProfiles, monitors: root.state.connected, outputs: {}
       }

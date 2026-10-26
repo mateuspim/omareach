@@ -59,18 +59,20 @@ Column {
   // --- keyboard cursor (Panel.pageKey) ----------------------------------------
   // In reading order: the shown panels two to a row, the toolbar's three
   // buttons, the panels to add three to a row, then Animation and CPU
-  // power. Off the Stats fill, its one button, then the last row.
+  // power, then Mesh addresses. Off the Stats fill, its one button, then
+  // the last two rows.
   readonly property int toolbarAt: active ? shown.length : 1
   readonly property int addAt: toolbarAt + (active && shown.length ? 3 : 0)
   readonly property int everyAt: addAt + (active ? hidden.length : 0)
+  readonly property int meshAt: everyAt + (cpuPowerShown ? 2 : 1)
   readonly property var cursorRows: (active
       ? Model.gridRows(shown.length, shownGrid.columns).concat(shown.length ? [3] : [], Model.gridRows(hidden.length, addGrid.columns))
       : [1])
-    .concat([cpuPowerShown ? 2 : 1])
+    .concat([cpuPowerShown ? 2 : 1, 1])
   readonly property var cursorKeys: (active
       ? shown.map(function(p) { return "shown:" + p }).concat(shown.length ? ["earlier", "later", "hide"] : [], hidden.map(function(p) { return "add:" + p }))
       : ["use"])
-    .concat(["pace"], cpuPowerShown ? ["cpu"] : [])
+    .concat(["pace"], cpuPowerShown ? ["cpu"] : [], ["mesh"])
   // A panel just added moves from Add to the shown ones; the cursor goes
   // with it.
   function cursorFallback(key) { return key.indexOf("add:") === 0 ? "shown:" + key.slice(4) : "" }
@@ -99,6 +101,7 @@ Column {
       else panel.togglePanel(name)
     } else if (index === everyAt) paceDropdown.open()
     else if (index === everyAt + 1 && cpuPowerShown) changeCpuPower()
+    else if (index === meshAt) toggleMeshAddress()
   }
   // Returns where the cursor goes: onto the panel that took the hidden
   // one's place, or the last one.
@@ -115,6 +118,7 @@ Column {
     moveSelected(delta)
     return shown.indexOf(picked)
   }
+  function toggleMeshAddress() { panel.reserve.setStatsTunnelAddress(!panel.reserve.statsTunnelAddress) }
   function changeCpuPower() { panel.reserve.changeCpuPower(panel.reserve.cpuPower === "on" ? "disable" : "enable") }
 
   // --- not the stats fill ----------------------------------------------------
@@ -325,5 +329,22 @@ Column {
         : "The CPU's energy counter is root's, so the CPU panel cannot show its power draw.\nClick to open it with a udev rule: a terminal shows the commands and asks first"
       onClicked: { page.changeCpuPower(); page.panel.refocus() }
     }
+  }
+  // A mesh's address (Tailscale's 100.x) on the Network card, for ssh
+  // from another machine; off, the card says only that it is on, since
+  // the dashboard is on screen for anyone in the room.
+  Button {
+    width: parent.width
+    text: "Mesh addresses  ·  " + (page.panel.reserve.statsTunnelAddress ? "Shown" : "Hidden")
+    iconText: "󰖂"
+    selected: page.panel.reserve.statsTunnelAddress
+    hasCursor: page.cursorOn(page.meshAt)
+    bordered: true
+    foreground: page.panel.foreground
+    fontFamily: page.panel.fontFamily
+    tooltipText: page.panel.reserve.statsTunnelAddress
+      ? "The Network panel shows the address of each mesh, such as Tailscale.\nClick to show only that it is on"
+      : "The Network panel shows only that a mesh, such as Tailscale, is on.\nClick to show its address too"
+    onClicked: { page.toggleMeshAddress(); page.panel.refocus() }
   }
 }

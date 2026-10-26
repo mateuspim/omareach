@@ -63,19 +63,59 @@ QtObject {
   // Restarting stats.sh for a new argument: off for a moment, then on.
   property bool restarting: false
   onProcessesChanged: if (sampler.running) { restarting = true; restartTimer.restart() }
+  // Whether stats.sh asks `ip` for the tunnels' addresses (ReserveState's
+  // statsTunnelAddress); it reads the environment once, so a change
+  // restarts it.
+  property bool tunnelAddress: false
+  onTunnelAddressChanged: if (sampler.running) { restarting = true; restartTimer.restart() }
 
   property Process sampler: Process {
     command: ["bash", root.script, String(root.interval), root.processes ? String(root.processEvery) : "0"]
-    environment: ({ STATS_NVIDIA: root.nvidiaMode === "on" ? "1" : "0" })
+    environment: ({ STATS_NVIDIA: root.nvidiaMode === "on" ? "1" : "0", STATS_TUNNEL_ADDRESS: root.tunnelAddress ? "1" : "0" })
     running: root.running && !root.restarting && root.samplerEpoch >= 0
     stdout: SplitParser {
       splitMarker: "@end\n"
       onRead: function(frame) {
-        root.data = Stats.step(root.data, frame, root.gpuLines, root.media ? root.track() : null, root.batteries ? Stats.upowerBatteries(root.peripherals()) : null)
+        root.data = Stats.withTunnelInfo(Stats.step(root.data, frame, root.gpuLines, root.media ? root.track() : null, root.batteries ? Stats.upowerBatteries(root.peripherals()) : null), root.tunnelInfo)
         root.gpuLines = []
       }
     }
     onExited: if (root.running && !root.restarting) samplerRetry.restart()
+  }
+
+  // Where the VPNs and meshes that are up go (vpn.sh, Stats.parseVpnInfo),
+  // laid over every frame. The kernel only says a tunnel is up, so each
+  // client is asked: every 10 s while one is up, and as soon as the set
+  // changes; never while none is.
+  readonly property string vpnScript: decodeURIComponent(String(Qt.resolvedUrl("vpn.sh")).replace(/^file:\/\//, ""))
+  readonly property string tunnelKey: Stats.tunnelClients(data.network).join(" ")
+  property var tunnelInfo: null
+  // The tunnels the run in flight was started for: one that ends after
+  // they changed answered for the old set, so its answer is dropped and
+  // it runs again for the new one.
+  property string vpnAskedFor: ""
+  onTunnelKeyChanged: {
+    tunnelInfo = null
+    if (tunnelKey && running) vpnTimer.restart()
+  }
+  function askVpn() {
+    if (vpnProcess.running) return
+    vpnAskedFor = tunnelKey
+    vpnProcess.command = ["bash", vpnScript].concat(tunnelKey.split(" "))
+    vpnProcess.running = true
+  }
+  property Process vpnProcess: Process {
+    stdout: StdioCollector {
+      onStreamFinished: if (root.vpnAskedFor === root.tunnelKey) root.tunnelInfo = root.tunnelKey ? Stats.parseVpnInfo(text) : null
+    }
+    onExited: if (root.vpnAskedFor !== root.tunnelKey && root.tunnelKey && root.running) Qt.callLater(root.askVpn)
+  }
+  property Timer vpnTimer: Timer {
+    interval: 10000
+    repeat: true
+    triggeredOnStart: true
+    running: root.running && root.tunnelKey !== ""
+    onTriggered: root.askVpn()
   }
 
   // Found once, the first time a panel needs it: whether there is an

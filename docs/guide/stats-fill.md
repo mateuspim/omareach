@@ -16,7 +16,7 @@ with history graphs and meters:
 | iGPU | The integrated GPU beside it, read the same way; on a machine with one GPU it takes no card | sysfs |
 | CPU | Load and clock with a bar per thread (performance and efficient cores apart on a hybrid Intel CPU), power draw against the CPU's limit, temperature, load average, and how long tasks stalled waiting for the CPU while they do | `/proc/stat`, the CPU's hwmon sensor, RAPL, cpufreq, `/proc/pressure` |
 | Memory | One bar of used and cached memory, available, swap, and how long tasks stalled waiting for memory while they do | `/proc/meminfo`, `/proc/pressure` |
-| Network | Download and upload graphs, with the rates, the peak each graph's top stands for and the totals since boot as rows, on the interface of the default route | `/proc/net/dev`, `/proc/net/route` |
+| Network | Download and upload graphs, with the rates, the [VPN and mesh](#vpn-and-mesh) that are on, the peak each graph's top stands for and the totals since boot as rows, on the interface of the default route | `/proc/net/dev`, `/proc/net/route`, `/sys/class/net`, `/proc/net/if_inet6` |
 | Disks | Read and write per disk with the peak of the last minute, NVMe temperatures (unless Sensors is shown), and how long tasks stalled on I/O while they do | `/proc/diskstats`, NVMe hwmon, `/proc/pressure` |
 | Processes | The programs using the most CPU, memory and video memory, processes of one name added up; a small card keeps the top one of each | `/proc/<pid>/stat`, `nvidia-smi` |
 | Sensors | The temperatures no other panel on the dashboard shows (the CPU and its dies, the GPUs, NVMe drives, memory modules), each against its own limit, led by the hottest for its limit, then the fans | hwmon, sysfs, `nvidia-smi` |
@@ -91,8 +91,8 @@ when the edge runs out of room, "not on this machine" for an iGPU panel
 without a second GPU or a Battery panel without a battery (which **Add**
 leaves out, and the count leaves out too). Click one under **Add** to
 show it last. Right-click Hide, or one under Add, to do the same on every
-monitor; right-clicking a shown panel only selects it. The page's **Every monitor** row sets the Animation
-and CPU power (below) for every dashboard. Without the Stats fill, the
+monitor; right-clicking a shown panel only selects it. The page's **Every monitor** rows set the Animation,
+CPU power and Mesh addresses (below) for every dashboard. Without the Stats fill, the
 page offers to switch to it.
 
 From the keyboard, the arrows (or `h` `j` `k` `l`) walk the page and
@@ -120,6 +120,53 @@ power management on, as on most laptops) and has shown no load for 5
 seconds rests: nvidia-smi stops, an AMD card is read every 10 seconds
 instead of every second, and the panel shows its last reading as idle
 until a reading finds it busy again.
+
+## VPN and mesh
+
+The Network card says whether a VPN is on. Its **VPN** row, between the
+rates and the peaks, names the client in green (**Proton VPN**,
+**NordVPN**, **Mullvad**, **PIA**, **IVPN**, **Windscribe**, **ExpressVPN**,
+**Obscura**, **WARP**, or **VPN** for a WireGuard, OpenVPN or PPP tunnel
+no installed client owns) with where it comes out when the
+client says (**Proton VPN · Miami, US**), and once one has been on, says
+**off** in red when it drops. A machine that never runs a VPN gets no
+row. A mesh (Tailscale, ZeroTier, NetBird, Nebula) gets its own row,
+with how many of its peers are online (**1/4 online**), or **on**; it is
+not counted as a VPN, since it reaches your other machines and leaves the
+rest of the traffic alone, unless Tailscale sends everything through an
+exit node (**VPN · Tailscale · via nas**).
+
+The place comes from each client: Proton's app cache (its server and
+that server's city), `nordvpn status`, `mullvad status`, PIA's region
+(`piactl`, nothing when set to auto), `ivpn status`, `windscribe-cli
+status`, ExpressVPN's `expressvpnctl` or `expressvpn status`, and
+`tailscale status --json` for the peers. A tunnel with a plain name
+(`tun0`, as Proton, PIA, IVPN and Mullvad use over OpenVPN, and
+ExpressVPN) takes the name of whichever installed client says it is
+connected. Obscura and WARP show their name only, and Surfshark,
+CyberGhost and others show as **VPN**.
+Hovering the VPN row shows the server and interface; hovering Tailscale's
+shows this machine's MagicDNS name and addresses, the exit node, and up to
+eight peers, online ones first, each with its OS and whether it is reached
+directly or through a relay.
+
+Whether one is on comes from the tunnels' interfaces (`proton0`, `nordlynx`, `wg0-mullvad`,
+`tailscale0`, …) rather than the default route, which VPN clients leave
+on the wired or wireless card and steer around with policy rules. It
+only watches: connecting and disconnecting stay with each client.
+
+The Stats page's **Mesh addresses** switch, off by default since the
+dashboard is on screen for anyone in the room, shows a mesh's IPv4
+address (Tailscale's `100.x`) on its row, ahead of the peers online.
+It asks `ip` for the addresses every 10 seconds while a tunnel is up, and
+on the first frames after one comes up. Hovering a row shows the
+addresses whatever the switch says.
+
+Two limits: a PPPoE or mobile-broadband `ppp0` that carries the default
+route is your internet link, not a VPN, so it gets no row; and a plain
+`tun0` is named after the first installed client that says it is
+connected, so a Proton cache left behind by a crash can name another
+client's OpenVPN tunnel "Proton VPN" until Proton runs again.
 
 ## CPU power
 

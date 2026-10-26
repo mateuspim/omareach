@@ -1,5 +1,23 @@
 # Changelog
 
+## 1.10.0 — 2026-10-26
+
+### Added
+
+- **VPN on the Network card:** a VPN row names the VPN that is on and
+  where it comes out ("Proton VPN · Miami, US"), and turns red with "off"
+  when it drops. Proton VPN, NordVPN, Mullvad, PIA, IVPN, Windscribe and
+  ExpressVPN give their place; Obscura and WARP their name; any other
+  WireGuard, OpenVPN or PPP tunnel shows as "VPN". A plain `tun0`, as
+  over OpenVPN, takes the name of the installed client that is
+  connected. It reads the tunnels, not the default route, which VPN
+  clients leave on the wired or wireless card.
+- **Tailscale and other meshes** get a row of their own with how many
+  peers are online. Hovering shows this machine's names and addresses,
+  the exit node and each peer; a Tailscale exit node counts as a VPN.
+- **Mesh addresses:** a switch on the Stats page (`statsTunnelAddress`,
+  off by default) puts a mesh's address on its row.
+
 ## 1.9.0 — 2026-10-26
 
 ### Added

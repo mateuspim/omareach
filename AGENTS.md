@@ -12,10 +12,10 @@ indexes the rest; update the spec a change touches.
 
 ## Project
 
-- Layout: every `.qml` and `.js` file, `stats.sh` and `cpu-power.sh` at the
-  root. Omarchy loads the entry points in `manifest.json` (`Service.qml`,
-  `Panel.qml`); QML finds siblings through `qmldir`, so a new component goes
-  in `qmldir` too. Don't add QML subfolders. Tests in `tests/`, guide images
+- Layout: every `.qml` and `.js` file, `stats.sh`, `vpn.sh` and
+  `cpu-power.sh` at the root. Omarchy loads the entry points in
+  `manifest.json` (`Service.qml`, `Panel.qml`); QML finds siblings through
+  `qmldir`, so a new component goes in `qmldir` too. Don't add QML subfolders. Tests in `tests/`, guide images
   in `docs/`.
 - Logic that can live without QML goes in `Model.js` (reserves, profiles,
   fills), `Stats.js` (the dashboard's data) or `StatsViews.js` (its

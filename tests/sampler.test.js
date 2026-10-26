@@ -1,6 +1,8 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { readFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { tmpdir } from "node:os"
+import { join } from "node:path"
 import vm from "node:vm"
 
 // Runs the real stats.sh on this machine and reads its frames the way the
@@ -63,6 +65,74 @@ const tests = {
     const [frame] = frames(runWith({ STATS_NVIDIA: "0" }, 0.1, 1, 1))
     assert.ok(frame.procs.length > 10)
     assert.equal(frame.gpuapps, undefined)
+  },
+  "tunnels come from the interfaces, with addresses only when asked"() {
+    // A made-up /sys/class/net: WireGuard, a stopped Tailscale, Proton's
+    // leak guard (a dummy), a VM's tap, a down tun and a wired card; and
+    // an `ip` that prints addresses as `ip -o -4 addr show` does.
+    const root = mkdtempSync(join(tmpdir(), "omareach-net-"))
+    const iface = (name, type, flags, extra = {}) => {
+      mkdirSync(join(root, "net", name), { recursive: true })
+      writeFileSync(join(root, "net", name, "type"), type + "\n")
+      writeFileSync(join(root, "net", name, "flags"), flags + "\n")
+      writeFileSync(join(root, "net", name, "uevent"), extra.uevent || "INTERFACE=" + name + "\n")
+      if (extra.tun) writeFileSync(join(root, "net", name, "tun_flags"), extra.tun + "\n")
+    }
+    iface("proton0", 65534, "0x91", { uevent: "DEVTYPE=wireguard\nINTERFACE=proton0\n" })
+    iface("tailscale0", 65534, "0x1091", { tun: "0x5001" })
+    iface("ipv6leakintrf0", 1, "0x83")
+    iface("vnet0", 1, "0x1003", { tun: "0x1002" })
+    iface("tun9", 65534, "0x1090", { tun: "0x1001" })
+    iface("eno1", 1, "0x1003")
+    writeFileSync(join(root, "if_inet6"), [
+      "fe800000000000000000000000000001 05 40 20 80 tailscale0",
+      "fd000000000000000000000000000002 04 40 00 80 proton0"
+    ].join("\n") + "\n")
+    mkdirSync(join(root, "bin"))
+    writeFileSync(join(root, "bin", "ip"), "#!/bin/sh\necho '4: proton0    inet 10.2.0.2/32 scope global proton0\\       valid_lft forever preferred_lft forever'\n", { mode: 0o755 })
+    const env = { STATS_SYS_NET: join(root, "net"), STATS_IF_INET6: join(root, "if_inet6"), PATH: join(root, "bin") + ":" + process.env.PATH }
+    try {
+      const [quiet] = frames(runWith(env, 0.1, 0, 1))
+      assert.deepEqual([...quiet.tunnel], ["proton0\twireguard\t1\t", "tailscale0\ttun\t0\t", "vnet0\ttap\t0\t"])
+      const [asked] = frames(runWith({ ...env, STATS_TUNNEL_ADDRESS: "1" }, 0.1, 0, 1))
+      assert.equal(asked.tunnel[0], "proton0\twireguard\t1\t10.2.0.2")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
+  },
+  "vpn.sh finds Proton's server and its place in the app's cache"() {
+    const root = mkdtempSync(join(tmpdir(), "omareach-vpn-"))
+    mkdirSync(join(root, "connection"))
+    writeFileSync(join(root, "connection", "connection_persistence.json"), JSON.stringify({ backend: "linuxnetworkmanager", server: { server_name: "BR#12", domain: "node-br-1.protonvpn.net" } }))
+    // Pretty-printed like the app's list, with a server whose name
+    // starts the same and fields of the server's own entries in between.
+    writeFileSync(join(root, "serverlist.json"), JSON.stringify({ LogicalServers: [
+      { Name: "BR#1", ExitCountry: "BR", City: "Rio de Janeiro", State: "" },
+      { Name: "BR#12", Tier: 2, ExitCountry: "BR", City: "Sao Paulo", Servers: [{ EntryIP: "1.2.3.4", Label: "3" }], State: "Sao Paulo" },
+      { Name: "US-FL#332", ExitCountry: "US", City: "Miami", State: "Florida" }
+    ] }, null, 4))
+    try {
+      const text = execFileSync("bash", [new URL("../vpn.sh", import.meta.url).pathname, "proton", "unknown"], { encoding: "utf8", env: { ...process.env, STATS_PROTON_CACHE: root } })
+      assert.equal(text, "@proton\nserver\tBR#12\ncountry\tBR\ncity\tSao Paulo\nstate\tSao Paulo\n")
+      assert.equal(Stats.parseVpnInfo(text).proton.place, "Sao Paulo, BR")
+      // For a plain tun0 only an OpenVPN connection counts.
+      const vpn = new URL("../vpn.sh", import.meta.url).pathname
+      // A PATH of only what vpn.sh needs, so no VPN client installed here
+      // answers.
+      const bin = join(root, "bin")
+      mkdirSync(bin)
+      const where = tool => execFileSync("bash", ["-c", "type -P " + tool], { encoding: "utf8" }).trim()
+      for (const tool of ["awk", "timeout"]) symlinkSync(where(tool), join(bin, tool))
+      const bash = where("bash")
+      const generic = () => execFileSync(bash, [vpn, "generic"], { encoding: "utf8", env: { ...process.env, STATS_PROTON_CACHE: root, PATH: bin } })
+      assert.equal(generic().includes("@proton"), false)
+      writeFileSync(join(root, "connection", "connection_persistence.json"), JSON.stringify({ protocol: "openvpn-udp", server: { server_name: "BR#12" } }))
+      assert.ok(generic().startsWith("@proton\nserver\tBR#12\n"))
+      rmSync(join(root, "connection"), { recursive: true })
+      assert.equal(execFileSync("bash", [new URL("../vpn.sh", import.meta.url).pathname, "proton"], { encoding: "utf8", env: { ...process.env, STATS_PROTON_CACHE: root } }), "")
+    } finally {
+      rmSync(root, { recursive: true, force: true })
+    }
   },
   "two frames make real loads and rates"() {
     const state = frames(run(0.3, 1, 2)).reduce(Stats.ingest, Stats.empty())

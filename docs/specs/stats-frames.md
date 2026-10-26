@@ -22,6 +22,8 @@ stats.sh INTERVAL PROCESS_EVERY [FRAMES]
 | --- | --- |
 | `STATS_NVIDIA=0` | Leave `nvidia-smi` out of `@gpuapps`. The shell sets it while the NVIDIA GPU rests or sleeps ([ADR 7](../adr/0007-let-an-idle-dgpu-rest.md)). |
 | `OMARCHY_PATH` | An Omarchy checkout other than `/usr/share/omarchy` makes `@sysinfo` report `omarchy` as `dev`. |
+| `STATS_TUNNEL_ADDRESS=1` | Fill `@tunnel`'s address column from one `ip -o -4 addr show`, run on every 10th frame and whenever the set of tunnels changes. The shell sets it while the panel's **Mesh addresses** switch is on. |
+| `STATS_SYS_NET`, `STATS_IF_INET6` | Other paths for `/sys/class/net` and `/proc/net/if_inet6`, for tests. |
 | `STATS_AMDGPU_IDS`, `STATS_PCI_IDS` | Other paths for libdrm's `amdgpu.ids` and hwdata's `pci.ids`, for the GPU names. Defaults `/usr/share/libdrm/amdgpu.ids`, `/usr/share/hwdata/pci.ids`. |
 
 `LC_ALL=C` is forced. Unreadable files are skipped quietly; the script
@@ -60,6 +62,7 @@ empty strings.
 | `@meminfo` | frame | `/proc/meminfo`. |
 | `@route` | frame | `/proc/net/route`; the default route with the lowest metric picks the interface. |
 | `@net` | frame | `/proc/net/dev`. |
+| `@tunnel` | frame | *tab* `interface`, `kind`, `routable`, `ipv4` for each interface in `/sys/class/net` that is up (`flags` bit 0) and is a tunnel: `wireguard` (type 65534, `DEVTYPE=wireguard`), `tun` or `tap` (has `tun_flags`; bit `0x2` is tap), `ppp` (type 512) or `tunnel` (any other type 65534). `routable` is `1` when `/proc/net/if_inet6` gives it an address of scope `00` (global or unique local, not `fe80`), else `0`. `ipv4` is empty unless `STATS_TUNNEL_ADDRESS=1`. `Stats.parseTunnels` names them by interface (`Stats.TUNNELS`; `tap` only for ZeroTier, since a VM's tap is likelier than a VPN's), leaves out the default route's interface (a PPPoE `ppp0` is the uplink), and counts Tailscale as on only with a routable or IPv4 address: a stopped Tailscale keeps `tailscale0` up. Other meshes take their interface down. |
 | `@disk` | frame | `/proc/diskstats`; whole disks only are used (sd, hd, vd, xvd, nvme namespaces, mmcblk). |
 | `@model` | frame | *tab* `block device`, `model`, for devices that report one. |
 | `@psi` | frame | `<resource> <line>` for `cpu`, `memory`, `io` from `/proc/pressure`. |
@@ -110,6 +113,40 @@ fields with a numeric index; `[N/A]` and `[Not Supported]` read as null,
 memory is MiB. While the GPU rests it runs the same query without `-lms`
 every 10 s instead; while it sleeps, not at all. Three runs in a row that
 print nothing mark the GPU missing.
+
+## vpn.sh
+
+```bash
+vpn.sh CLIENT...
+```
+
+`StatsSampler.qml` runs it with `Stats.tunnelClients` of the last frame
+(`proton`, `tailscale`, `nordvpn`, `mullvad`, `pia`, `ivpn`, `windscribe`,
+or `generic` for a tunnel no client names, such as `tun0`) every 10 s while there are
+any and as soon as they change, and hands its stdout to
+`Stats.parseVpnInfo`; `Stats.withTunnelInfo` lays it over every frame
+after. Each client it can read prints a section; others print nothing.
+It always exits 0.
+
+| Section | Lines |
+| --- | --- |
+| `@proton` | *tab* `server` (`US-FL#332`) from `server_name` in the app's `connection/connection_persistence.json`, then `country`, `city`, `state` from that server's entry in `serverlist.json`, when it has them. Both are in `$XDG_CACHE_HOME/Proton/VPN` (`STATS_PROTON_CACHE` for tests). |
+| `@tailscale` | `tailscale status --json`, as is. Read: `BackendState` (`Running` only), `TailscaleIPs` and `DNSName` of `Self`, and each peer's `Online`, `OS`, `CurAddr` (direct) or `Relay`, and `ExitNode`. Nodes go by the first label of `DNSName`, else `HostName`; `CurrentTailnet` is not read. |
+| `@nordvpn` | `nordvpn status`, as is: `Status`, `Country`, `City`. |
+| `@mullvad` | `mullvad status`, as is: `Visible location: …` or the older `Connected to … in …`. |
+| `@pia` | *tab* `state` and `region` from `piactl get connectionstate` and `piactl get region` (`Connected`; `us-florida`, or `auto`). From pia-foss/desktop's `cli/src/getcommand.cpp`. |
+| `@ivpn` | `ivpn status`, as is: `VPN : CONNECTED`, and `gateway [host], City (CC), Country`. From ivpn/desktop-app's `cli/commands/base.go`. |
+| `@windscribe` | `windscribe-cli status`, as is: `Connect state: Connected: City`, `Protocol: …`. From Windscribe/Desktop-App's `src/windscribe-cli/strings.cpp`. Asked only for its own tunnel (`utun420`), since the CLI starts the app. |
+| `@expressvpn` | *tab* `state` and `region` from `expressvpnctl get`, or the older `expressvpn status` as is (`Connected to USA - New York`). |
+
+`generic` asks Proton (an OpenVPN connection only: its WireGuard tunnel
+is `proton0`), PIA, ExpressVPN, IVPN and Mullvad, each only if installed;
+`Stats.withTunnelInfo` names the tunnel after the first of them
+(`Stats.GENERIC_CLIENTS`) that is connected and owns no named tunnel.
+
+Each command runs with a 3 s timeout. The NordVPN, Mullvad and ExpressVPN
+formats come from their documentation; PIA's, IVPN's and Windscribe's
+from their clients' source. None of them is tested on a real install.
 
 ## Restart behaviour
 

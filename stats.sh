@@ -93,6 +93,17 @@ for card in /sys/class/drm/card*; do
   [[ -n $name ]] && gpu_names[$id]=$name
 done
 
+# Network interfaces, for the tunnels a VPN or a mesh (Tailscale) brings
+# up. STATS_SYS_NET points tests at a made-up tree.
+net_root=${STATS_SYS_NET:-/sys/class/net}
+# STATS_TUNNEL_ADDRESS=1 adds each tunnel's IPv4 address. The kernel keeps
+# no per-interface IPv4 file (only /proc/net/if_inet6, for IPv6), so this
+# asks `ip` once, on every tenth frame and whenever the tunnels change.
+tunnel_address=${STATS_TUNNEL_ADDRESS:-0}
+declare -A tunnel_ips
+tunnels_were=""
+tunnel_fresh=0
+
 # The page size, for the processes' resident memory, which /proc/<pid>/stat
 # gives in pages: 4 KiB on x86, but 16 or 64 KiB on some ARM kernels.
 # Asked once, so no frame starts a process for it.
@@ -119,6 +130,56 @@ while :; do
   printf '@meminfo\n'; dump /proc/meminfo
   printf '@route\n'; dump /proc/net/route
   printf '@net\n'; dump /proc/net/dev
+
+  # The tunnels that are up. A VPN client (Proton, NordLynx, Mullvad,
+  # wg-quick) routes through its tunnel with policy rules (ip rule), so the
+  # default route in @route keeps naming the wired or wireless interface
+  # while it is connected: only the interfaces themselves tell. A tunnel
+  # has no hardware address (type 65534: WireGuard and tun), is PPP (512),
+  # or has tun_flags (tun and tap). Proton's leak guards are dummies (type
+  # 1) and stay out.
+  tunnels=() kinds=()
+  for dir in "$net_root"/*; do
+    type="" flags="" kind=""
+    { read -r type < "$dir/type"; read -r flags < "$dir/flags"; } 2>/dev/null || continue
+    [[ $flags == 0x* ]] && (( flags & 1 )) || continue
+    if [[ -e $dir/tun_flags ]]; then
+      tun=0
+      { read -r tun < "$dir/tun_flags"; } 2>/dev/null
+      # IFF_TAP
+      (( tun & 2 )) && kind=tap || kind=tun
+    elif [[ $type == 512 ]]; then kind=ppp
+    elif [[ $type == 65534 ]]; then
+      kind=tunnel
+      { while IFS= read -r line; do [[ $line == DEVTYPE=wireguard ]] && kind=wireguard; done < "$dir/uevent"; } 2>/dev/null
+    else continue
+    fi
+    tunnels+=("${dir##*/}") kinds+=("$kind")
+  done
+  # A new tunnel's client may give it its address a moment after bringing
+  # it up, so the three frames after a change ask again.
+  [[ "${tunnels[*]}" != "$tunnels_were" ]] && tunnel_fresh=3
+  if [[ $tunnel_address == 1 && ${#tunnels[@]} -gt 0 ]] && { (( n % 10 == 0 )) || (( tunnel_fresh > 0 )); }; then
+    tunnel_ips=()
+    while read -r _ name _ address _; do
+      [[ -z ${tunnel_ips[$name]:-} ]] && tunnel_ips[$name]=${address%/*}
+    done < <(ip -o -4 addr show 2>/dev/null)
+  fi
+  tunnels_were="${tunnels[*]}"
+  (( tunnel_fresh > 0 )) && (( tunnel_fresh-- ))
+  # Tunnels with an IPv6 address past link-local (scope 00, global or
+  # unique local), which a mesh gets once it is connected: a stopped
+  # Tailscale keeps tailscale0 up with only its fe80 address.
+  declare -A routable=()
+  if (( ${#tunnels[@]} )); then
+    { while read -r _ _ _ scope _ name; do
+      [[ $scope == 00 ]] && routable[$name]=1
+    done < "${STATS_IF_INET6:-/proc/net/if_inet6}"; } 2>/dev/null
+  fi
+  printf '@tunnel\n'
+  for i in "${!tunnels[@]}"; do
+    printf '%s\t%s\t%s\t%s\n' "${tunnels[i]}" "${kinds[i]}" "${routable[${tunnels[i]}]:-0}" "${tunnel_ips[${tunnels[i]}]:-}"
+  done
   printf '@disk\n'; dump /proc/diskstats
 
   printf '@model\n'

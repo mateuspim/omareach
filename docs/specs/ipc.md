@@ -69,6 +69,7 @@ at most 32 characters, matched exactly and then ignoring case.
   "idleBlack": 0,
   "idle": false,
   "statsPace": 30,
+  "statsTunnelAddress": false,
   "ruler": "",
   "profile": "Desk",
   "profiles": ["Desk", "Gaming"],

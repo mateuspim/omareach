@@ -17,7 +17,7 @@ them, one page at a time:
 | --- | --- | --- |
 | **Edges** | Each edge in pixels, and the aspect presets | below |
 | **Fill** | What the edges show, the dim amount, which edge the clock or the stats go on | [Fills](fills.md) |
-| **Stats** | The dashboard's panels and their order, its animation and CPU power | [The stats fill](stats-fill.md) |
+| **Stats** | The dashboard's panels and their order, its animation, CPU power and mesh addresses | [The stats fill](stats-fill.md) |
 | **Profiles** | Named snapshots of every monitor | [Profiles](profiles.md) |
 
 Click a tab or press `[` and `]` to switch pages. The panel opens on the

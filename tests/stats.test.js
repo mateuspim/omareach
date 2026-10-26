@@ -132,6 +132,165 @@ const tests = {
     assert.deepEqual(plain(net.eno1), { rx: 29099514268, tx: 1410672755 })
     assert.deepEqual(plain(net.lo), { rx: 173185512, tx: 173185512 })
   },
+  "tunnelKind names VPNs and meshes by their interface, generic names last"() {
+    assert.deepEqual(plain(Stats.tunnelKind("proton0")), { name: "Proton VPN", mesh: false, client: "proton", staysUp: false })
+    assert.equal(Stats.tunnelKind("nordlynx").name, "NordVPN")
+    assert.equal(Stats.tunnelKind("nordtun").name, "NordVPN")
+    // Mullvad's wg-quick name starts like any WireGuard tunnel.
+    assert.equal(Stats.tunnelKind("wg0-mullvad").name, "Mullvad")
+    assert.equal(Stats.tunnelKind("CloudflareWARP").name, "WARP")
+    assert.deepEqual(plain(Stats.tunnelKind("tailscale0")), { name: "Tailscale", mesh: true, client: "tailscale", staysUp: true })
+    assert.equal(Stats.tunnelKind("ztabcdef12").name, "ZeroTier")
+    assert.equal(Stats.tunnelKind("tun0").name, "VPN")
+    assert.equal(Stats.tunnelKind("wg0").name, "VPN")
+    // A VM's tap device is no VPN, whatever its name.
+    assert.equal(Stats.tunnelKind("vnet0"), null)
+    assert.equal(Stats.tunnelKind("tap0"), null)
+  },
+  "parseTunnels counts a mesh only once it has an address"() {
+    const tunnels = Stats.parseTunnels([
+      "proton0\twireguard\t1\t",
+      // Stopped: tailscale0 stays up with only its link-local address.
+      "tailscale0\ttun\t0\t",
+      "vnet0\ttap\t0\t"
+    ])
+    assert.deepEqual(plain(tunnels), { vpn: [{ name: "Proton VPN", interface: "proton0", address: "", client: "proton" }], mesh: [] })
+    const connected = Stats.parseTunnels(["tailscale0\ttun\t1\t", "ztabc\ttap\t0\t10.147.17.5"])
+    assert.deepEqual(plain(connected.mesh.map(t => t.name)), ["Tailscale", "ZeroTier"])
+    assert.equal(connected.mesh[1].address, "10.147.17.5")
+    // Two tunnels of one client make one name.
+    assert.equal(Stats.parseTunnels(["tun0\ttun\t1\t", "tun1\ttun\t1\t"]).vpn.length, 1)
+  },
+  "parseTunnels counts other meshes by their interface, and leaves the uplink out"() {
+    // NetBird and ZeroTier are often IPv4-only; their interface goes down
+    // when they stop.
+    assert.deepEqual(plain(Stats.parseTunnels(["wt0\ttun\t0\t"]).mesh.map(t => t.name)), ["NetBird"])
+    assert.deepEqual(plain(Stats.parseTunnels(["ztabcdef12\ttap\t0\t"]).mesh.map(t => t.name)), ["ZeroTier"])
+    // A PPPoE link carrying the default route is the internet, and does
+    // not hide the VPN through it.
+    const tunnels = Stats.parseTunnels(["ppp0\tppp\t1\t", "tun0\ttun\t1\t"], "ppp0")
+    assert.deepEqual(plain(tunnels.vpn.map(t => t.interface)), ["tun0"])
+    assert.deepEqual(plain(Stats.parseTunnels(["ppp0\tppp\t1\t"], "eno1").vpn.map(t => t.interface)), ["ppp0"])
+  },
+  "ingest leaves the default route's ppp out of the VPNs"() {
+    const pppoe = frame(1, [0]).replace("eno1\t00000000", "ppp0\t00000000") + "@tunnel\nppp0\tppp\t1\t\n"
+    const state = Stats.ingest(Stats.empty(), Stats.parseFrame(pppoe))
+    assert.deepEqual(plain(state.network.vpn), [])
+    assert.equal(state.network.vpnSeen, false)
+  },
+  "the small parsers behind parseVpnInfo"() {
+    assert.deepEqual(plain(Stats.tabFields(["server\tBR#12", "city\t São Paulo ", "no tab", "\tempty key"])), { server: "BR#12", city: "São Paulo" })
+    assert.deepEqual(plain(Stats.colonFields(["Status: Connected", "  Current technology: NORDLYNX  ", "no colon"])), { Status: "Connected", "Current technology": "NORDLYNX" })
+    // nordvpn's spinner, printed even into a pipe.
+    assert.deepEqual(plain(Stats.colonFields(["-\r  \r\\\r  \rStatus: Connected"])), { Status: "Connected" })
+    assert.equal(Stats.place(["Miami", "", "US"]), "Miami, US")
+    assert.equal(Stats.place(["", ""]), "")
+    assert.equal(Stats.tailscaleName({ DNSName: "nas.tail1234.ts.net.", HostName: "NAS box" }), "nas")
+    assert.equal(Stats.tailscaleName({ HostName: "NAS box" }), "NAS box")
+    assert.equal(Stats.jsonText("S\\u00e3o"), "São")
+    assert.equal(Stats.jsonText("plain"), "plain")
+    assert.equal(Stats.parseVpnInfo("@nordvpn\n-\r  \rStatus: Connected\nCountry: Brazil\nCity: Sao Paulo\n").nordvpn.place, "Sao Paulo, Brazil")
+  },
+  "parseVpnInfo reads where each client is connected"() {
+    const tailscale = JSON.stringify({
+      BackendState: "Running",
+      CurrentTailnet: { Name: "someone@example.com" },
+      Self: { HostName: "Desk PC", DNSName: "desk.tail1234.ts.net.", TailscaleIPs: ["100.64.0.1", "fd7a:115c:a1e0::1"] },
+      Peer: {
+        a: { HostName: "nas", DNSName: "nas.tail1234.ts.net.", OS: "linux", Online: true, CurAddr: "192.168.1.5:41641" },
+        b: { HostName: "phone", OS: "iOS", Online: false },
+        c: { HostName: "vps", OS: "linux", Online: true, ExitNode: true, CurAddr: "", Relay: "fra" }
+      }
+    }, null, 2)
+    const info = Stats.parseVpnInfo([
+      "@proton", "server\tUS-FL#332", "country\tUS", "city\tMiami", "state\tFlorida",
+      "@tailscale", tailscale,
+      "@nordvpn", "Status: Connected", "Server: Brazil #50", "Country: Brazil", "City: Sao Paulo",
+      "@mullvad", "Connected", "    Relay:              se-got-wg-001", "    Visible location:   Sweden, Gothenburg. IPv4: 185.0.0.1"
+    ].join("\n"))
+    assert.deepEqual(plain(info.proton), { server: "US-FL#332", place: "Miami, US", details: ["US-FL#332 · Miami, Florida"] })
+    // The tailnet's name, often an email address, stays out; peers go by
+    // their MagicDNS names, online first.
+    assert.deepEqual(plain(info.tailscale), {
+      peers: 3, online: 2, exitNode: "vps",
+      self: { name: "desk", dns: "desk.tail1234.ts.net", ips: ["100.64.0.1", "fd7a:115c:a1e0::1"] },
+      nodes: [
+        { name: "nas", os: "linux", online: true, link: "direct" },
+        { name: "vps", os: "linux", online: true, link: "relay fra" },
+        { name: "phone", os: "iOS", online: false, link: "" }
+      ]
+    })
+    assert.deepEqual(plain(info.nordvpn), { place: "Sao Paulo, Brazil", details: ["Brazil #50"] })
+    assert.deepEqual(plain(info.mullvad), { place: "Sweden, Gothenburg", details: ["se-got-wg-001"] })
+    // Older mullvad, a server the list lacks, and clients that are off.
+    assert.equal(Stats.parseVpnInfo("@mullvad\nConnected to se-got-wg-001 in Gothenburg, Sweden\n").mullvad.place, "Gothenburg, Sweden")
+    assert.deepEqual(plain(Stats.parseVpnInfo("@proton\nserver\tBR#12\n").proton), { server: "BR#12", place: "BR", details: ["BR#12"] })
+    // The server list's JSON escapes come back as letters.
+    const escaped = Stats.parseVpnInfo("@proton\nserver\tBR#19\ncountry\tBR\ncity\tS\\u00e3o Paulo\nstate\tS\\u00e3o Paulo\n").proton
+    assert.deepEqual(plain(escaped), { server: "BR#19", place: "São Paulo, BR", details: ["BR#19 · São Paulo, São Paulo"] })
+    assert.equal(Stats.jsonText("a\\qb"), "a\\qb")
+    assert.equal(Stats.parseVpnInfo("@nordvpn\nStatus: Disconnected\n").nordvpn, undefined)
+    assert.equal(Stats.parseVpnInfo("@tailscale\n" + JSON.stringify({ BackendState: "Stopped" })).tailscale, undefined)
+    assert.equal(Stats.parseVpnInfo("@tailscale\nnot json").tailscale, undefined)
+  },
+  "parseVpnInfo reads PIA, ExpressVPN, IVPN and Windscribe"() {
+    assert.deepEqual(plain(Stats.parseVpnInfo("@pia\nstate\tConnected\nregion\tus-florida\n").pia), { place: "us-florida", details: [] })
+    // "auto" says nothing about where it went; still connected.
+    assert.deepEqual(plain(Stats.parseVpnInfo("@pia\nstate\tConnected\nregion\tauto\n").pia), { place: "", details: [] })
+    assert.equal(Stats.parseVpnInfo("@pia\nstate\tDisconnected\nregion\tauto\n").pia, undefined)
+    assert.equal(Stats.parseVpnInfo("@expressvpn\nstate\tConnected\nregion\tsmart\n").expressvpn.place, "")
+    assert.equal(Stats.parseVpnInfo("@expressvpn\nConnected to USA - New York\n").expressvpn.place, "USA - New York")
+    // ivpn status, as cli/commands/base.go lays it out.
+    const ivpn = Stats.parseVpnInfo([
+      "@ivpn",
+      "VPN         :  CONNECTED",
+      "               us-ny.wg.ivpn.net [us-ny1.wg.ivpn.net], New York (US), United States",
+      "    Protocol  :  WireGuard"
+    ].join("\n")).ivpn
+    assert.deepEqual(plain(ivpn), { place: "New York, US", details: ["us-ny1.wg.ivpn.net"] })
+    assert.equal(Stats.parseVpnInfo("@ivpn\nVPN : DISCONNECTED\n").ivpn, undefined)
+    // windscribe-cli status, as src/windscribe-cli/strings.cpp words it.
+    const windscribe = Stats.parseVpnInfo("@windscribe\nInternet connectivity: available\nConnect state: *Connected: Boston [Network interference]\nProtocol: WireGuard:443\n").windscribe
+    assert.deepEqual(plain(windscribe), { place: "Boston", details: ["WireGuard:443"] })
+    assert.equal(Stats.parseVpnInfo("@windscribe\nConnect state: Disconnected\n").windscribe, undefined)
+  },
+  "a tunnel no client names takes the connected client's name"() {
+    const tun = { name: "VPN", interface: "tun0", address: "", client: "generic" }
+    const network = { vpn: [tun], mesh: [], vpnSeen: true }
+    assert.deepEqual(plain(Stats.tunnelClients(network)), ["generic"])
+    const proton = Stats.withTunnelInfo({ network }, { proton: { server: "BR#12", place: "Sao Paulo, BR", details: ["BR#12"] } })
+    assert.deepEqual(plain([proton.network.vpn[0].name, proton.network.vpn[0].place]), ["Proton VPN", "Sao Paulo, BR"])
+    // A client a named tunnel already has does not name the generic one.
+    const both = Stats.withTunnelInfo({ network: { vpn: [{ name: "Proton VPN", interface: "proton0", client: "proton" }, tun], mesh: [], vpnSeen: true } }, { proton: { place: "Miami, US" }, pia: { place: "" } })
+    assert.deepEqual(plain(both.network.vpn.map(t => t.name)), ["Proton VPN", "PIA"])
+    // No client says it is connected: it stays a VPN.
+    assert.equal(Stats.withTunnelInfo({ network }, {}).network.vpn[0].name, "VPN")
+    assert.equal(Stats.tunnelKind("wgivpn").name, "IVPN")
+    assert.equal(Stats.tunnelKind("utun420").client, "windscribe")
+  },
+  "withTunnelInfo places VPNs, counts mesh peers and takes an exit node for a VPN"() {
+    const network = { vpn: [{ name: "Proton VPN", interface: "proton0", address: "", client: "proton" }], mesh: [{ name: "Tailscale", interface: "tailscale0", address: "", client: "tailscale" }], vpnSeen: true }
+    assert.deepEqual(plain(Stats.tunnelClients(network)), ["proton", "tailscale"])
+    const state = Stats.withTunnelInfo({ network }, { proton: { server: "US-FL#332", place: "Miami, US" }, tailscale: { peers: 4, online: 1, exitNode: "" } })
+    assert.equal(state.network.vpn[0].place, "Miami, US")
+    assert.equal(state.network.mesh[0].online, 1)
+    assert.equal(Stats.withTunnelInfo({ network }, null).network, network)
+    const exit = Stats.withTunnelInfo({ network: Object.assign({}, network, { vpn: [], vpnSeen: false }) }, { tailscale: { peers: 4, online: 1, exitNode: "vps" } })
+    assert.deepEqual(plain(exit.network.vpn.map(t => [t.name, t.place])), [["Tailscale", "via vps"]])
+    // The exit node's row names the mesh's own interface.
+    const second = { vpn: [], mesh: [{ name: "Tailscale", interface: "tailscale1", client: "tailscale" }], vpnSeen: false }
+    assert.equal(Stats.withTunnelInfo({ network: second }, { tailscale: { peers: 1, online: 1, exitNode: "vps" } }).network.vpn[0].interface, "tailscale1")
+    assert.equal(exit.network.vpnSeen, true)
+  },
+  "ingest remembers a VPN was on after it goes off"() {
+    let state = Stats.ingest(Stats.empty(), Stats.parseFrame(frame(1, [0])))
+    assert.equal(state.network.vpnSeen, false)
+    state = Stats.ingest(state, Stats.parseFrame(frame(2, [0], "@tunnel\nproton0\twireguard\t1\t\n")))
+    assert.equal(state.network.vpn[0].name, "Proton VPN")
+    state = Stats.ingest(state, Stats.parseFrame(frame(3, [0], "@tunnel\n")))
+    assert.deepEqual(plain(state.network.vpn), [])
+    assert.equal(state.network.vpnSeen, true)
+  },
   "parseDiskstats keeps whole disks only, in bytes"() {
     const disks = Stats.parseDiskstats(Stats.parseFrame(frame(0, [0])).disk)
     assert.deepEqual(Object.keys(disks), ["sda", "nvme0n1"])
@@ -833,6 +992,44 @@ Object.assign(tests, {
     const disks = Views.view("disks", full, palette)
     assert.equal(disks.info, "2 disks · peak " + Stats.formatShort(disks.graphs[0].max) + "/s")
     assert.equal(disks.graphs[0].label, "")
+  },
+  "the network view says whether a VPN is on, and which meshes"() {
+    // No VPN this session: no row about one.
+    assert.ok(!Views.view("network", full, palette).rows.some(row => row.label === "VPN"))
+    const withNetwork = network => Object.assign({}, full, { network: Object.assign({}, full.network, network) })
+    const on = Views.view("network", withNetwork({ vpn: [{ name: "Proton VPN", interface: "proton0", address: "10.2.0.2" }], vpnSeen: true }), palette)
+    // Ahead of Peak and Total, which a short card drops first.
+    assert.deepEqual(plain(on.rows.map(row => row.label)), ["Down", "Up", "VPN", "Peak", "Total"])
+    assert.equal(on.rows[2].text, "Proton VPN")
+    assert.equal(on.rows[2].color, palette.gradients.level[0])
+    const off = Views.view("network", withNetwork({ vpn: [], vpnSeen: true }), palette)
+    assert.equal(off.rows[2].text, "off")
+    assert.equal(off.rows[2].color, palette.alert)
+    // A mesh shows its address when stats.sh was asked for it, else "on".
+    const mesh = Views.view("network", withNetwork({ mesh: [{ name: "Tailscale", interface: "tailscale0", address: "" }] }), palette)
+    assert.deepEqual(plain(mesh.rows.slice(2, 3).map(row => [row.label, row.text])), [["Tailscale", "on"]])
+    const shown = Views.view("network", withNetwork({ mesh: [{ name: "Tailscale", interface: "tailscale0", address: "100.101.102.103" }] }), palette)
+    assert.equal(shown.rows[2].text, "100.101.102.103")
+    // With vpn.sh's word on where each goes.
+    const placed = Views.view("network", withNetwork({ vpn: [{ name: "Proton VPN", place: "Miami, US" }], vpnSeen: true, mesh: [{ name: "Tailscale", address: "100.101.102.103", peers: 4, online: 1 }] }), palette)
+    assert.equal(placed.rows[2].text, "Proton VPN · Miami, US")
+    assert.equal(placed.rows[3].text, "100.101.102.103 · 1/4 online")
+    assert.equal(Views.meshText({ name: "ZeroTier" }), "on")
+    assert.equal(Views.meshText({ peers: 4, online: 0 }), "0/4 online")
+    assert.equal(Views.vpnTip([{ name: "VPN", interface: "tun0" }]), "VPN\ntun0")
+    assert.equal(Views.meshTip({ interface: "wt0" }), "wt0")
+    // Hovering says more.
+    const status = Stats.parseVpnInfo("@tailscale\n" + JSON.stringify({
+      BackendState: "Running",
+      Self: { DNSName: "desk.tail1234.ts.net.", TailscaleIPs: ["100.64.0.1"] },
+      Peer: Object.fromEntries(Array.from({ length: 10 }, (_, i) => ["p" + i, { HostName: "node" + i, OS: "linux", Online: i === 0, CurAddr: i === 0 ? "1.2.3.4:41641" : "" }]))
+    })).tailscale
+    const hovered = Views.view("network", withNetwork({ vpn: [{ name: "Proton VPN", interface: "proton0", place: "Miami, US", details: ["US-FL#332 · Miami, Florida"] }], vpnSeen: true, mesh: [{ name: "Tailscale", interface: "tailscale0", peers: 10, online: 1, status }] }), palette)
+    assert.equal(hovered.rows[2].tip, "Proton VPN · Miami, US\nUS-FL#332 · Miami, Florida\nproton0")
+    const tip = hovered.rows[3].tip.split("\n")
+    assert.deepEqual(tip.slice(0, 4), ["desk.tail1234.ts.net", "100.64.0.1", "", "● node0  linux, direct"])
+    assert.equal(tip[4], "○ node1  linux, offline")
+    assert.equal(tip[tip.length - 1], "and 2 more")
   },
   "the processes view lists CPU and GPU apps"() {
     const view = Views.view("processes", full, palette)

@@ -27,6 +27,10 @@ QtObject {
   // Frames a second the stats fill's graphs and meters move at
   // (Model.statsPace); one setting for every monitor, like idleBlack.
   property int statsPace: Model.STATS_PACE
+  // Whether the network card shows a mesh's (Tailscale's) address, not
+  // just that it is on. Off by default: the dashboard is on screen for
+  // anyone in the room.
+  property bool statsTunnelAddress: false
   // Named snapshots of `outputs` (Model.snapshot), saved beside it.
   property var profiles: ({})
   // Profiles applied by themselves when exactly a set of monitors is
@@ -132,6 +136,12 @@ QtObject {
     var value = Model.statsPace(pace)
     if (value === statsPace) return
     statsPace = value
+    saveTimer.restart()
+  }
+
+  function setStatsTunnelAddress(on) {
+    if (on === statsTunnelAddress) return
+    statsTunnelAddress = on
     saveTimer.restart()
   }
 
@@ -277,6 +287,7 @@ QtObject {
     var state = { outputs: outputs }
     if (idleBlack) state.idleBlack = idleBlack
     if (statsPace !== Model.STATS_PACE) state.statsPace = statsPace
+    if (statsTunnelAddress) state.statsTunnelAddress = true
     if (Object.keys(profiles).length) state.profiles = profiles
     if (Object.keys(autoProfiles).length) state.autoProfiles = autoProfiles
     if (lastMonitors.length) state.monitors = lastMonitors
@@ -305,6 +316,7 @@ QtObject {
       outputs = parsed && parsed.outputs ? parsed.outputs : ({})
       idleBlack = Model.idleSeconds(parsed && parsed.idleBlack)
       statsPace = Model.statsPace(parsed && parsed.statsPace)
+      statsTunnelAddress = (parsed && parsed.statsTunnelAddress) === true
       profiles = Model.profiles(parsed && parsed.profiles)
       autoProfiles = Model.autoProfiles(parsed && parsed.autoProfiles, profiles)
       lastMonitors = Model.keyList(parsed && parsed.monitors)
@@ -327,6 +339,7 @@ QtObject {
       root.outputs = ({})
       root.idleBlack = 0
       root.statsPace = Model.STATS_PACE
+      root.statsTunnelAddress = false
       root.profiles = ({})
       root.autoProfiles = ({})
       root.lastMonitors = []
@@ -389,6 +402,7 @@ QtObject {
     media: root.statsPanels.indexOf("media") !== -1
     batteries: root.statsPanels.indexOf("battery") !== -1
     pace: root.statsPace
+    tunnelAddress: root.statsTunnelAddress
   }
 
   // The Omarchy logo's SVG source, for the logo fill to recolor.
