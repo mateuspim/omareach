@@ -91,7 +91,9 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   panels share.
 - **`StatsFill.qml`** lays out the grid; **`StatsCard.qml`** draws one
   panel; **`StatsGraph.qml`** the scrolling history graphs;
-  **`StatsEase.qml`** eases meters between samples.
+  **`StatsEase.qml`** eases meters between samples. A card's rows are
+  **`StatsRow.qml`**, its hover tips **`StatsTip.qml`** and the Now playing
+  panel's track **`StatsMedia.qml`**.
 - **`vpn.sh`** asks the clients whose tunnels are up where they go: Proton's
   server and city from its app's cache, `tailscale status --json`,
   `nordvpn status`, `mullvad status`, `piactl get`, `ivpn status`,

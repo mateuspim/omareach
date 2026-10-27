@@ -4,6 +4,9 @@ Ruler 1.0 Ruler.qml
 StatsSampler 1.0 StatsSampler.qml
 StatsFill 1.0 StatsFill.qml
 StatsCard 1.0 StatsCard.qml
+StatsRow 1.0 StatsRow.qml
+StatsTip 1.0 StatsTip.qml
+StatsMedia 1.0 StatsMedia.qml
 StatsGraph 1.0 StatsGraph.qml
 StatsEase 1.0 StatsEase.qml
 ReserveIcon 1.0 ReserveIcon.qml
