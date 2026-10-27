@@ -15,3 +15,7 @@ PanelEdgesPage 1.0 PanelEdgesPage.qml
 PanelFillPage 1.0 PanelFillPage.qml
 PanelStatsPage 1.0 PanelStatsPage.qml
 PanelProfilesPage 1.0 PanelProfilesPage.qml
+PanelAnchor 1.0 PanelAnchor.qml
+PanelHeader 1.0 PanelHeader.qml
+PanelKeys 1.0 PanelKeys.qml
+PanelFooter 1.0 PanelFooter.qml
