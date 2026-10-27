@@ -1,8 +1,8 @@
 {
   "name": "omareach",
-  "version": "1.10.0",
+  "version": "1.11.0",
   "private": true,
   "author": "Mateus Pim",
   "type": "module",
-  "scripts": { "test": "node tests/model.test.js && node tests/stats.test.js && node tests/sampler.test.js && node tests/cpupower.test.js && node tests/qml.test.js" }
+  "scripts": { "test": "for f in tests/*.test.js; do node \"$f\" || exit 1; done" }
 }

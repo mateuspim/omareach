@@ -39,14 +39,21 @@ omarchy plugin validate .    # the manifest, as the marketplace checks it
 
 | Test | Covers |
 | --- | --- |
-| `model.test.js` | `Model.js`: normalizing, keys, budgets, presets, profiles, fills, clock, fullscreen fitting. |
-| `stats.test.js` | `Stats.js` and `StatsViews.js`: parsing frames, rates, palette, tiling, each panel's rows. |
+| `model.test.js` | `Model.js`: normalizing, fills, stats panels, page navigation, fullscreen fitting. |
+| `modeledges.test.js` | `ModelEdges.js`: limits, budgets, aspect presets, ruler, sliders. |
+| `modelprofiles.test.js` | `ModelProfiles.js`: monitor keys, profiles, automatic profiles. |
+| `modelart.test.js` | `ModelArt.js`: clock and logo bitmaps, layouts, burn-in shifts. |
+| `stats.test.js` | `Stats.js`: frames and GPU lines into state, rates, histories. |
+| `statsproc.test.js`, `statsnet.test.js`, `statssystem.test.js`, `statsgpu.test.js` | The parser of the same name. |
+| `statsformat.test.js` | `StatsFormat.js`: palette, heat levels, text forms. |
+| `statsviews.test.js` | `StatsTiles.js` and `StatsRows.js`: tiling a strip, fitting rows under a headline. |
+| `statspanels.test.js`, `statshardware.test.js` | `StatsViews.js`: each panel's rows. |
 | `sampler.test.js` | Runs the real `stats.sh` on this machine and parses its frames ([spec](../specs/stats-frames.md)). |
 | `cpupower.test.js` | `cpu-power.sh` against a made-up powercap tree (`CPU_POWER_SYSFS`); never needs root. |
 | `qml.test.js` | Every plugin `Text` renders plain text, so metadata and names can't load images through markup. |
 
-Put logic that can live without QML in `Model.js`, `Stats.js` or
-`StatsViews.js` and test
+Put logic that can live without QML in the `Model*.js` or `Stats*.js`
+scripts (`StatsViews.js`, `StatsTiles.js` and `StatsRows.js` draw) and test
 it there. A bug fix gets a regression test.
 
 ## Make a change

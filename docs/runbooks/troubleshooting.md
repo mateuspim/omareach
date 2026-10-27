@@ -124,7 +124,7 @@ counter: ARM, AMD before Zen, most VMs), `locked` or `on`.
 | `The commands ran, but the counter reads …` | Another rule or policy changed the counter back. | Check `/etc/udev/rules.d` and `ls -l /sys/class/powercap/*/energy_uj`. |
 
 **The power row shows watts but no meter.** The CPU's limit is unknown:
-a laptop, or an AMD model missing from the table in `Stats.js`.
+a laptop, or an AMD model missing from the table in `StatsSystem.js`.
 
 **A wireless mouse or keyboard on a Logitech Bolt receiver shows no
 battery.** The kernel's Logitech driver does not support Bolt receivers.

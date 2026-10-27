@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.11.0 — 2026-10-26
+
+### Changed
+
+- **Smaller files, same plugin:** every script and test is under 500
+  lines. The stats data is split by what it reads (`StatsProc`,
+  `StatsNet`, `StatsSystem`, `StatsGpu`, `StatsFormat`), its drawing into
+  `StatsTiles`, `StatsRows` and `StatsViews`, the model into `ModelEdges`,
+  `ModelProfiles` and `ModelArt`, and the panel and stats cards into
+  smaller components. Nothing you see or set changes.
+- **The panel's pages image** shows the Mesh addresses switch.
+
 ## 1.10.0 — 2026-10-26
 
 ### Added

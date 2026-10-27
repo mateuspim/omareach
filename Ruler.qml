@@ -2,6 +2,7 @@ import QtQuick
 import qs.Commons
 import qs.Commons as Commons
 import "Model.js" as Model
+import "ModelEdges.js" as Edges
 
 // The calibration ruler: a scale from the middle of every edge to the middle
 // of the screen, with a tick every 10 px, a longer one every 50 and the
@@ -49,7 +50,7 @@ Item {
         opacity: 0.55
       }
 
-      readonly property var ticks: Model.rulerTicks(length)
+      readonly property var ticks: Edges.rulerTicks(length)
 
       Repeater {
         model: edgeScale.ticks

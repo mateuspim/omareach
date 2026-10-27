@@ -1,7 +1,7 @@
 import QtQuick
 import qs.Ui
 import qs.Commons
-import "Model.js" as Model
+import "ModelProfiles.js" as Profiles
 
 // The panel's Profiles page: named snapshots of every monitor. A chip
 // applies one, and the one on screen is selected; the field below names
@@ -114,7 +114,7 @@ Column {
     // Ties the named profile to the monitors connected now.
     Button {
       id: autoButton
-      readonly property string existing: Model.findProfile(page.panel.reserve.profiles, profileField.text)
+      readonly property string existing: Profiles.findProfile(page.panel.reserve.profiles, profileField.text)
       anchors.right: saveProfileButton.left
       anchors.rightMargin: Style.spacing.md
       anchors.verticalCenter: parent.verticalCenter
@@ -135,8 +135,8 @@ Column {
     }
     Button {
       id: saveProfileButton
-      readonly property string name: Model.profileName(profileField.text)
-      readonly property string existing: Model.findProfile(page.panel.reserve.profiles, name)
+      readonly property string name: Profiles.profileName(profileField.text)
+      readonly property string existing: Profiles.findProfile(page.panel.reserve.profiles, name)
       anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: existing ? "Update" : "Save"
