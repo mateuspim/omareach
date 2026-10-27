@@ -5,6 +5,8 @@ import qs.Commons
 import "." as Reserve
 import "Stats.js" as Stats
 import "StatsFormat.js" as Format
+import "StatsRows.js" as Rows
+import "StatsTiles.js" as Tiles
 import "StatsViews.js" as Views
 
 // One panel of the stats dashboard, drawn the way btop draws its boxes: a
@@ -26,7 +28,7 @@ Item {
   property var theme: Format.palette({}, {})
   required property int unit
   property string fontFamily: Style.font.family
-  readonly property bool wide: width > height * Views.WIDE_CARD
+  readonly property bool wide: width > height * Tiles.WIDE_CARD
   // Omarchy's icon beside a view that asks for it (System), as fastfetch
   // shows the distro's: as tall as the body, when that leaves the rows
   // room enough (a label and a short value, about 13 units).
@@ -39,8 +41,8 @@ Item {
   // alarm color, in a thicker, solid outline, with a warning mark for its
   // icon; at CRITICAL the title is filled in as well.
   readonly property int alert: shown.alert || 0
-  readonly property color outline: alert >= Views.ALERT ? theme.alert : alert === Views.CAUTION ? theme.caution : shown.color
-  readonly property bool critical: alert >= Views.CRITICAL
+  readonly property color outline: alert >= Rows.ALERT ? theme.alert : alert === Rows.CAUTION ? theme.caution : shown.color
+  readonly property bool critical: alert >= Rows.CRITICAL
 
   // The rows with meters share a label column and a value column, so
   // their meters start and end together. The value column is as wide as

@@ -2,6 +2,7 @@ import QtQuick
 import qs.Ui
 import qs.Commons
 import "Model.js" as Model
+import "StatsTiles.js" as Tiles
 import "StatsViews.js" as Views
 
 // The panel's Stats page: which panels this monitor's dashboard shows, in
@@ -17,7 +18,7 @@ Column {
   // fit the strip are left off from the end.
   readonly property var samples: panel.reserve.stats.data
   readonly property var strip: Model.statsStrip(panel.edge, panel.screenWidth, panel.screenHeight)
-  readonly property var dropped: strip ? Views.fit(Views.availablePanels(shown, samples), strip.width, strip.height).dropped : []
+  readonly property var dropped: strip ? Tiles.fit(Views.availablePanels(shown, samples), strip.width, strip.height).dropped : []
   readonly property var hidden: Model.panelOrder(shown).slice(shown.length).filter(function(p) { return Views.available(p, page.samples) })
   readonly property int possible: Model.STATS_PANELS.filter(function(p) { return Views.available(p, page.samples) }).length
   // Counted like `possible`: a panel this machine has no use for is chosen

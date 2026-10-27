@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { plain, frame, ALL_PANELS, palette, full, Format, Net, Sys, Stats, Views, run } from "./statsfixtures.js"
+import { plain, frame, ALL_PANELS, palette, full, Format, Net, Sys, Stats, Rows, Views, run } from "./statsfixtures.js"
 
 // StatsViews.js: what each panel shows, and the network, processes, system,
 // battery, media and disks panels.
@@ -59,10 +59,10 @@ Object.assign(tests, {
     const placed = Views.view("network", withNetwork({ vpn: [{ name: "Proton VPN", place: "Miami, US" }], vpnSeen: true, mesh: [{ name: "Tailscale", address: "100.101.102.103", peers: 4, online: 1 }] }), palette)
     assert.equal(placed.rows[2].text, "Proton VPN · Miami, US")
     assert.equal(placed.rows[3].text, "100.101.102.103 · 1/4 online")
-    assert.equal(Views.meshText({ name: "ZeroTier" }), "on")
-    assert.equal(Views.meshText({ peers: 4, online: 0 }), "0/4 online")
-    assert.equal(Views.vpnTip([{ name: "VPN", interface: "tun0" }]), "VPN\ntun0")
-    assert.equal(Views.meshTip({ interface: "wt0" }), "wt0")
+    assert.equal(Rows.meshText({ name: "ZeroTier" }), "on")
+    assert.equal(Rows.meshText({ peers: 4, online: 0 }), "0/4 online")
+    assert.equal(Rows.vpnTip([{ name: "VPN", interface: "tun0" }]), "VPN\ntun0")
+    assert.equal(Rows.meshTip({ interface: "wt0" }), "wt0")
     // Hovering says more.
     const status = Net.parseVpnInfo("@tailscale\n" + JSON.stringify({
       BackendState: "Running",
@@ -169,14 +169,14 @@ Object.assign(tests, {
     // Louder as it empties: 15%, 10% and 5%, laptop or peripheral.
     const at = capacity => Object.assign({}, laptop, { power: [Object.assign({}, laptop.power[0], { capacity })] })
     assert.equal(Views.view("battery", at(16), palette).alert, 0)
-    assert.equal(Views.view("battery", at(15), palette).alert, Views.CAUTION)
+    assert.equal(Views.view("battery", at(15), palette).alert, Rows.CAUTION)
     assert.equal(Views.view("battery", at(15), palette).note, "low")
-    assert.equal(Views.view("battery", at(10), palette).alert, Views.ALERT)
-    assert.equal(Views.view("battery", at(5), palette).alert, Views.CRITICAL)
+    assert.equal(Views.view("battery", at(10), palette).alert, Rows.ALERT)
+    assert.equal(Views.view("battery", at(5), palette).alert, Rows.CRITICAL)
     assert.equal(Views.view("battery", at(5), palette).note, "critical")
     const headset = Object.assign({}, laptop, { power: [laptop.power[0], { id: "bt", name: "EDIFIER W830NB", device: true, status: "", capacity: 8, level: "", power: null, energy: null, full: null }] })
     const loud = Views.view("battery", headset, palette)
-    assert.equal(loud.alert, Views.ALERT)
+    assert.equal(loud.alert, Rows.ALERT)
     // Named when it is not the battery leading the card.
     assert.equal(loud.note, "EDIFIER W830NB very low")
     const charging = Object.assign({}, laptop, { power: [Object.assign({}, laptop.power[0], { capacity: 12, status: "Charging" })] })

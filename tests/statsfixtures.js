@@ -8,7 +8,9 @@ export const Net = load("StatsNet.js")
 export const Sys = load("StatsSystem.js", { Format })
 export const Gpu = load("StatsGpu.js", { Proc, Sys })
 export const Stats = load("Stats.js", { Gpu, Net, Proc, Sys })
-export const Views = load("StatsViews.js", { Format, Gpu, Sys })
+export const Tiles = load("StatsTiles.js")
+export const Rows = load("StatsRows.js", { Format })
+export const Views = load("StatsViews.js", { Format, Gpu, Rows, Sys })
 
 // Objects made inside the sandbox have its prototypes; copy them out so
 // strict deep equality compares only their contents.

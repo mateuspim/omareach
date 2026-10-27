@@ -21,7 +21,8 @@ indexes the rest; update the spec a change touches.
   fills), the `Stats*.js` scripts (the dashboard's data: `Stats.js` keeps
   the state, `StatsProc.js`, `StatsNet.js`, `StatsSystem.js` and
   `StatsGpu.js` parse, `StatsFormat.js` has the palette and text forms) or
-  `StatsViews.js` (its layout and panels), so Node can test it.
+  `StatsTiles.js`, `StatsViews.js` and `StatsRows.js` (its layout, panels
+  and shared rows), so Node can test it.
   `tests/qmljs.js` loads them, `tests/statsfixtures.js` the stats ones.
 - Naming: OmaReach everywhere: plugin id and IPC target `pym.omareach`,
   layer namespaces `pym-omareach*`, settings `~/.config/omarchy/omareach.json`,
@@ -42,8 +43,8 @@ indexes the rest; update the spec a change touches.
 - Match the surrounding file: 2-space QML and JS, no semicolons where the file
   has none, typed QML properties where the shape is known.
 - Names specific and greppable; early returns over nested ifs.
-- No duplication: shared logic goes in `Model.js`, the `Stats*.js` scripts
-  or `StatsViews.js`.
+- No duplication: shared logic goes in `Model.js` or the `Stats*.js`
+  scripts.
 - Keep files focused and under 500 lines, tests included: split by
   responsibility rather than growing them.
 

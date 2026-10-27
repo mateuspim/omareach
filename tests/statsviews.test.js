@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { plain, frame, ALL_PANELS, palette, full, Sys, Gpu, Stats, Views, run } from "./statsfixtures.js"
+import { plain, frame, ALL_PANELS, palette, full, Sys, Gpu, Stats, Tiles, Rows, Views, run } from "./statsfixtures.js"
 
 // StatsViews.js: how the panels tile a strip.
 
@@ -15,7 +15,7 @@ const tests = {
   },
   "fit draws nothing on a strip with no size yet"() {
     for (const [w, h] of [[0, 0], [NaN, 100], [100, -5]]) {
-      const grid = Views.fit(["gpu", "cpu"], w, h)
+      const grid = Tiles.fit(["gpu", "cpu"], w, h)
       assert.deepEqual(plain(grid.cards), [], w + "x" + h)
       assert.deepEqual(plain(grid.dropped), ["gpu", "cpu"])
     }
@@ -31,61 +31,61 @@ const tests = {
     assert.equal(nvme.text, "R 1.0K  W 0  35°C")
   },
   "unitFor sizes the dashboard's text to the strip"() {
-    assert.equal(Views.unitFor(1440, 660), 18)
-    assert.equal(Views.unitFor(2560, 96), 12)
-    assert.equal(Views.unitFor(2560, 40), 9)
+    assert.equal(Tiles.unitFor(1440, 660), 18)
+    assert.equal(Tiles.unitFor(2560, 96), 12)
+    assert.equal(Tiles.unitFor(2560, 40), 9)
   },
   "layout tiles the panels in the grid with the largest cards"() {
     // A 1440x660 top strip fits four panels two by two.
-    const grid = Views.layout(["gpu", "cpu", "memory", "network"], 1440, 660, 18)
+    const grid = Tiles.layout(["gpu", "cpu", "memory", "network"], 1440, 660, 18)
     assert.deepEqual(plain(grid.cards.map(card => card.panel)), ["gpu", "cpu", "memory", "network"])
     assert.deepEqual(plain(grid.dropped), [])
     assert.equal(grid.cards[0].y, grid.cards[1].y)
     assert.ok(grid.cards[2].y > grid.cards[0].y)
     // A wide, short strip puts them in one row.
-    const row = Views.layout(["gpu", "cpu", "memory"], 2560, 160, 14)
+    const row = Tiles.layout(["gpu", "cpu", "memory"], 2560, 160, 14)
     assert.equal(new Set(row.cards.map(card => card.y)).size, 1)
     // A tall side strip stacks them.
-    const column = Views.layout(["gpu", "cpu", "memory"], 320, 1600, 16)
+    const column = Tiles.layout(["gpu", "cpu", "memory"], 320, 1600, 16)
     assert.equal(new Set(column.cards.map(card => card.x)).size, 1)
   },
   "layout keeps cards inside the strip with a margin"() {
-    const grid = Views.layout(ALL_PANELS, 1440, 660, 18)
+    const grid = Tiles.layout(ALL_PANELS, 1440, 660, 18)
     for (const card of grid.cards) {
       assert.ok(card.x >= 18 && card.y >= 18, JSON.stringify(card))
       assert.ok(card.x + card.width <= 1440 - 18 + 0.01 && card.y + card.height <= 660 - 18 + 0.01, JSON.stringify(card))
     }
   },
   "layout stretches a short last row across the strip"() {
-    const grid = Views.layout(["gpu", "cpu", "memory"], 1440, 660, 18)
+    const grid = Tiles.layout(["gpu", "cpu", "memory"], 1440, 660, 18)
     const last = grid.cards[grid.cards.length - 1]
     if (last.y !== grid.cards[0].y) assert.equal(Math.round(last.x + last.width), 1440 - 18)
   },
   "fit shrinks the text until every card has room for its content"() {
     // Four panels on the 1080x660 strip keep the largest text.
-    assert.equal(Views.fit(["gpu", "cpu", "memory", "network"], 1080, 660).unit, 18)
+    assert.equal(Tiles.fit(["gpu", "cpu", "memory", "network"], 1080, 660).unit, 18)
     // Every panel makes a crowded grid; the text shrinks until each card,
     // stacked or wide, has room for its content.
-    const dense = Views.fit(ALL_PANELS, 1080, 660)
+    const dense = Tiles.fit(ALL_PANELS, 1080, 660)
     assert.ok(dense.unit < 18)
     assert.equal(dense.cards.length, ALL_PANELS.length)
-    for (const card of dense.cards) assert.ok(Views.roomy(card, dense.unit), JSON.stringify(card))
+    for (const card of dense.cards) assert.ok(Tiles.roomy(card, dense.unit), JSON.stringify(card))
     // A short, wide strip gets wide cards, which need less height.
-    const strip = Views.fit(["gpu", "cpu", "memory", "network"], 2560, 160)
+    const strip = Tiles.fit(["gpu", "cpu", "memory", "network"], 2560, 160)
     assert.equal(strip.cards.length, 4)
-    assert.ok(strip.cards[0].width > strip.cards[0].height * Views.WIDE_CARD)
-    assert.ok(strip.cards[0].height >= Views.WIDE_ROOM * strip.unit)
+    assert.ok(strip.cards[0].width > strip.cards[0].height * Tiles.WIDE_CARD)
+    assert.ok(strip.cards[0].height >= Tiles.WIDE_ROOM * strip.unit)
     // Wide cards take fewer rows for larger text: a 160 px strip keeps
     // 16 px text, not the 13 px that every row needed.
     assert.ok(strip.unit >= 16, String(strip.unit))
-    assert.ok(Views.fit(["gpu", "cpu", "memory", "network"], 2560, 120).unit >= 12)
+    assert.ok(Tiles.fit(["gpu", "cpu", "memory", "network"], 2560, 120).unit >= 12)
     // A wide card needs room across too: two to a row on a 648 px
     // portrait strip, the text shrinks until headline and rows fit.
-    const portrait = Views.fit(ALL_PANELS.slice(0, 10), 648, 750)
-    for (const card of portrait.cards) assert.ok(card.width >= Views.WIDE_SPAN * portrait.unit || card.width <= card.height * Views.WIDE_CARD, JSON.stringify(card))
+    const portrait = Tiles.fit(ALL_PANELS.slice(0, 10), 648, 750)
+    for (const card of portrait.cards) assert.ok(card.width >= Tiles.WIDE_SPAN * portrait.unit || card.width <= card.height * Tiles.WIDE_CARD, JSON.stringify(card))
     assert.ok(portrait.unit <= 13, String(portrait.unit))
     // When nothing makes room, the smallest text still shows what fits.
-    const tiny = Views.fit(ALL_PANELS, 600, 120)
+    const tiny = Tiles.fit(ALL_PANELS, 600, 120)
     assert.equal(tiny.unit, 9)
     assert.ok(tiny.cards.length > 0)
   },
@@ -93,33 +93,33 @@ const tests = {
     const view = () => ({ value: "39%", note: "Tctl · 95°C", alert: 0, graphs: [{}, {}], bars: [{}, {}], stack: [{}] })
     // Room for everything: nothing goes.
     const roomy = view()
-    Views.fitHeadline(roomy, 10)
+    Rows.fitHeadline(roomy, 10)
     assert.equal(roomy.bars.length, 2)
     assert.equal(roomy.graphs.length, 2)
     // Three rows: the bars go first, then the stack, the note and the
     // second graph, never the value or the first graph.
     const short = view()
-    Views.fitHeadline(short, 3)
+    Rows.fitHeadline(short, 3)
     assert.equal(short.bars.length, 0)
     assert.equal(short.stack.length, 0)
     assert.equal(short.note, "")
     assert.equal(short.graphs.length, 1)
-    assert.ok(Views.headlineRows(short) <= 3 + Views.GAP_ROWS)
+    assert.ok(Rows.headlineRows(short) <= 3 + Rows.GAP_ROWS)
     // Four rows keep the CPU's value, graph and per-core bars.
     const cpu = { value: "39%", note: "", alert: 0, graphs: [{}], bars: [{}], stack: [] }
-    Views.fitHeadline(cpu, 4)
+    Rows.fitHeadline(cpu, 4)
     assert.equal(cpu.bars.length, 1)
     // A warning's note stays.
-    const warned = Object.assign(view(), { alert: Views.ALERT })
-    Views.fitHeadline(warned, 3)
+    const warned = Object.assign(view(), { alert: Rows.ALERT })
+    Rows.fitHeadline(warned, 3)
     assert.equal(warned.note, "Tctl · 95°C")
   },
   "layout drops the last panels when they do not fit"() {
-    const grid = Views.layout(["gpu", "cpu", "memory", "network", "disks"], 600, 120, 12)
+    const grid = Tiles.layout(["gpu", "cpu", "memory", "network", "disks"], 600, 120, 12)
     assert.ok(grid.cards.length < 5)
     assert.deepEqual(plain(grid.dropped), ["gpu", "cpu", "memory", "network", "disks"].slice(grid.cards.length))
-    assert.deepEqual(plain(Views.layout(["gpu"], 50, 50, 9).dropped), ["gpu"])
-    assert.deepEqual(plain(Views.layout([], 1440, 660, 18).cards), [])
+    assert.deepEqual(plain(Tiles.layout(["gpu"], 50, 50, 9).dropped), ["gpu"])
+    assert.deepEqual(plain(Tiles.layout([], 1440, 660, 18).cards), [])
   },
   "a panel with nothing to show on this machine takes no card"() {
     // The fixture has an RTX 4080 and a Radeon iGPU, and a wireless mouse.

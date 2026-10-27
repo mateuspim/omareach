@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { plain, frame, palette, full, Format, Gpu, Stats, Views, run } from "./statsfixtures.js"
+import { plain, frame, palette, full, Format, Gpu, Stats, Rows, Views, run } from "./statsfixtures.js"
 
 // StatsViews.js: what the GPU, CPU, memory and sensors panels show.
 
@@ -109,13 +109,13 @@ const tests = {
   "a card asks for its warning color when something nears its limit"() {
     assert.equal(Views.view("cpu", full, palette).alert, 0)
     const hotCpu = Object.assign({}, full, { cpu: Object.assign({}, full.cpu, { temp: 92, tempLimit: 95 }) })
-    assert.equal(Views.view("cpu", hotCpu, palette).alert, Views.ALERT)
+    assert.equal(Views.view("cpu", hotCpu, palette).alert, Rows.ALERT)
     const hotSensor = Object.assign({}, full, { temps: full.temps.map(t => t.name === "CPU" ? Object.assign({}, t, { temp: 92 }) : t) })
-    assert.equal(Views.view("temps", hotSensor, palette).alert, Views.ALERT)
+    assert.equal(Views.view("temps", hotSensor, palette).alert, Rows.ALERT)
     const fullMemory = Object.assign({}, full, { memory: Object.assign({}, full.memory, { used: full.memory.total * 0.95 }) })
-    assert.equal(Views.view("memory", fullMemory, palette).alert, Views.ALERT)
+    assert.equal(Views.view("memory", fullMemory, palette).alert, Rows.ALERT)
     const stalled = Object.assign({}, full, { pressure: { cpu: 0, memory: 0, io: 25 } })
-    assert.equal(Views.view("disks", stalled, palette).alert, Views.ALERT)
+    assert.equal(Views.view("disks", stalled, palette).alert, Rows.ALERT)
   },
   "the memory view is one stacked bar keyed by its rows"() {
     const view = Views.view("memory", full, palette)

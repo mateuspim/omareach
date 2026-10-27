@@ -82,9 +82,11 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   **`StatsSystem.js`** (sensors, names, batteries, player, CPU power) and
   **`StatsGpu.js`** (NVIDIA, DRM cards, which GPU is which).
   **`StatsFormat.js`** has the theme's palette from `colors.toml`, heat
-  levels and the text form of numbers. **`StatsViews.js`** is the pure drawing
-  side: how panels tile a strip (`Views.fit`) and the rows each panel shows
-  at a given size.
+  levels and the text form of numbers. The pure drawing side is
+  **`StatsTiles.js`**, how panels tile a strip (`Tiles.fit`),
+  **`StatsViews.js`**, the rows each panel shows at a given size, and
+  **`StatsRows.js`**, the rows, warning levels and headline fitting the
+  panels share.
 - **`StatsFill.qml`** lays out the grid; **`StatsCard.qml`** draws one
   panel; **`StatsGraph.qml`** the scrolling history graphs;
   **`StatsEase.qml`** eases meters between samples.
