@@ -75,9 +75,14 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   players and UPower devices. Its clock ticks at the animation pace. While a
   VPN or mesh tunnel is up it runs `vpn.sh` every 10 s and lays where each
   goes over the frames.
-- **`Stats.js`** is the pure data side: parsing frames, counters into
-  rates, history, the theme's palette from `colors.toml` and the text form
-  of numbers. **`StatsViews.js`**, which imports it, is the pure drawing
+- **`Stats.js`** is the pure data side: frames and `nvidia-smi` lines into
+  one state, counters into rates, history. It imports the parsers:
+  **`StatsProc.js`** (frame sections, CPU, memory, disks, pressure,
+  processes), **`StatsNet.js`** (interfaces, VPNs, meshes),
+  **`StatsSystem.js`** (sensors, names, batteries, player, CPU power) and
+  **`StatsGpu.js`** (NVIDIA, DRM cards, which GPU is which).
+  **`StatsFormat.js`** has the theme's palette from `colors.toml`, heat
+  levels and the text form of numbers. **`StatsViews.js`** is the pure drawing
   side: how panels tile a strip (`Views.fit`) and the rows each panel shows
   at a given size.
 - **`StatsFill.qml`** lays out the grid; **`StatsCard.qml`** draws one
@@ -107,7 +112,7 @@ theme's `colors.toml`.
 ## Tests
 
 `npm test` runs the Node tests in `tests/`: `model.test.js` (Model.js),
-`stats.test.js` and `sampler.test.js` (Stats.js, StatsViews.js and stats.sh frames) and
+a `stats*.test.js` per stats script, `sampler.test.js` (stats.sh frames) and
 `cpupower.test.js` (cpu-power.sh against a fake sysfs). GitHub Actions runs
 the same on every push. UI is checked in an offscreen harness, never on the
 live screens ([ADR 4](adr/0004-offscreen-render-harness.md)).

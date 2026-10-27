@@ -18,8 +18,11 @@ indexes the rest; update the spec a change touches.
   `qmldir`, so a new component goes in `qmldir` too. Don't add QML subfolders. Tests in `tests/`, guide images
   in `docs/`.
 - Logic that can live without QML goes in `Model.js` (reserves, profiles,
-  fills), `Stats.js` (the dashboard's data) or `StatsViews.js` (its
-  layout and panels), so Node can test it. `tests/qmljs.js` loads them.
+  fills), the `Stats*.js` scripts (the dashboard's data: `Stats.js` keeps
+  the state, `StatsProc.js`, `StatsNet.js`, `StatsSystem.js` and
+  `StatsGpu.js` parse, `StatsFormat.js` has the palette and text forms) or
+  `StatsViews.js` (its layout and panels), so Node can test it.
+  `tests/qmljs.js` loads them, `tests/statsfixtures.js` the stats ones.
 - Naming: OmaReach everywhere: plugin id and IPC target `pym.omareach`,
   layer namespaces `pym-omareach*`, settings `~/.config/omarchy/omareach.json`,
   log prefix `omareach:`. Never reintroduce `display-reserve` or
@@ -39,10 +42,10 @@ indexes the rest; update the spec a change touches.
 - Match the surrounding file: 2-space QML and JS, no semicolons where the file
   has none, typed QML properties where the shape is known.
 - Names specific and greppable; early returns over nested ifs.
-- No duplication: shared logic goes in `Model.js`, `Stats.js` or
-  `StatsViews.js`.
-- Keep files focused. `Panel.qml`, `Stats.js` and `StatsViews.js` are large;
-  split by responsibility rather than growing them.
+- No duplication: shared logic goes in `Model.js`, the `Stats*.js` scripts
+  or `StatsViews.js`.
+- Keep files focused and under 500 lines, tests included: split by
+  responsibility rather than growing them.
 
 ## Comments
 

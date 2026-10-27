@@ -4,6 +4,7 @@ import QtQuick.Layouts
 import qs.Commons
 import "." as Reserve
 import "Stats.js" as Stats
+import "StatsFormat.js" as Format
 import "StatsViews.js" as Views
 
 // One panel of the stats dashboard, drawn the way btop draws its boxes: a
@@ -18,11 +19,11 @@ Item {
   // Blank until set: a delegate's own bindings can run before these are
   // given, and would read undefined.
   property var view: blank
-  readonly property var blank: Views.view("", Stats.empty(), Stats.palette({}, {}))
+  readonly property var blank: Views.view("", Stats.empty(), Format.palette({}, {}))
   // What the card draws: `view`, or blank while a binding gives none.
   readonly property var shown: view || blank
   // Not `palette`: that would hide Item.palette.
-  property var theme: Stats.palette({}, {})
+  property var theme: Format.palette({}, {})
   required property int unit
   property string fontFamily: Style.font.family
   readonly property bool wide: width > height * Views.WIDE_CARD

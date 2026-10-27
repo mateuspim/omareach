@@ -1,7 +1,6 @@
 import QtQuick
 import qs.Commons
 import "." as Reserve
-import "Stats.js" as Stats
 import "StatsViews.js" as Views
 
 // The stats fill: the monitor's chosen panels tiled over the strip as
