@@ -33,10 +33,12 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   helpers: the wallpaper link, the Omarchy logo, the stats sampler and the
   CPU power status.
 - **`Model.js`** is the pure logic, without QML: normalizing entries,
-  storage keys ([ADR 2](adr/0002-key-settings-by-monitor-description.md)),
-  limits and budgets, aspect presets, profiles and automatic profiles, which
-  edge a fill shows on, the clock and logo layouts, and fullscreen fitting.
-  Node tests it.
+  which edge a fill shows on, stats panels, the panel's pages and
+  fullscreen fitting. Beside it, **`ModelEdges.js`** has limits and
+  budgets, aspect presets and the ruler; **`ModelProfiles.js`** storage
+  keys ([ADR 2](adr/0002-key-settings-by-monitor-description.md)),
+  profiles and automatic profiles; **`ModelArt.js`** the clock and logo
+  layouts. Node tests them.
 - **`Service.qml`** makes two layer surfaces per reserved edge: a
   Bottom-layer spacer whose exclusive zone reserves the edge, and an
   Overlay-layer cap that draws the fill
@@ -113,7 +115,7 @@ theme's `colors.toml`.
 
 ## Tests
 
-`npm test` runs the Node tests in `tests/`: `model.test.js` (Model.js),
+`npm test` runs the Node tests in `tests/`: a `model*.test.js` per model script,
 a `stats*.test.js` per stats script, `sampler.test.js` (stats.sh frames) and
 `cpupower.test.js` (cpu-power.sh against a fake sysfs). GitHub Actions runs
 the same on every push. UI is checked in an offscreen harness, never on the

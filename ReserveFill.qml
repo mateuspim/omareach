@@ -4,6 +4,7 @@ import qs.Commons
 import qs.Commons as Commons
 import "." as Reserve
 import "Model.js" as Model
+import "ModelArt.js" as Art
 
 // What one reserved edge shows, drawn over black (or the theme background)
 // so a missing or loading image falls back to the plain cap. The service draws it at screen size;
@@ -32,7 +33,7 @@ Rectangle {
   // The time the clock shows, and what the clock and the logo shift by
   // against burn-in (clockShift). Only ticks while one of them is shown.
   property date now: new Date()
-  readonly property var shift: Model.clockShift(now)
+  readonly property var shift: Art.clockShift(now)
   color: mode === "theme" ? Commons.Color.background : "black"
   clip: true
 
@@ -42,7 +43,7 @@ Rectangle {
   // every strip is its own window with its own copy of the texture, and a
   // 5K wallpaper is some 60 MB at full size.
   Image {
-    readonly property var offset: Model.imageOffset(fill.side, fill.size, fill.screenWidth, fill.screenHeight)
+    readonly property var offset: Art.imageOffset(fill.side, fill.size, fill.screenWidth, fill.screenHeight)
     visible: Model.showsWallpaper(fill.mode)
     x: offset.x
     y: offset.y
@@ -71,9 +72,9 @@ Rectangle {
   Column {
     id: logo
     readonly property string svg: Reserve.ReserveState.logoSvg
-    readonly property real aspect: Model.svgAspect(svg, 4)
-    readonly property var layout: Model.logoLayout(fill.width, fill.height, aspect, Reserve.ReserveState.iconArt, !fill.horizontal)
-    readonly property real step: Model.logoStep(width, height)
+    readonly property real aspect: Art.svgAspect(svg, 4)
+    readonly property var layout: Art.logoLayout(fill.width, fill.height, aspect, Reserve.ReserveState.iconArt, !fill.horizontal)
+    readonly property real step: Art.logoStep(width, height)
     visible: fill.mode === "logo" && svg !== "" && layout.width / aspect >= 4
     x: Math.round((fill.width - width) / 2 + fill.shift.x * step)
     y: Math.round((fill.height - height) / 2 + fill.shift.y * step)
@@ -100,7 +101,7 @@ Rectangle {
       width: logo.layout.width
       height: logo.layout.width / logo.aspect
       source: logo.visible
-        ? "data:image/svg+xml;base64," + Qt.btoa(Model.recolorSvg(logo.svg, Model.hexColor(fill.logoColor.r, fill.logoColor.g, fill.logoColor.b)))
+        ? "data:image/svg+xml;base64," + Qt.btoa(Art.recolorSvg(logo.svg, Art.hexColor(fill.logoColor.r, fill.logoColor.g, fill.logoColor.b)))
         : ""
       sourceSize.width: Math.ceil(width)
       sourceSize.height: Math.ceil(height)
@@ -115,7 +116,7 @@ Rectangle {
   // minutes, against burn-in.
   Item {
     id: clock
-    readonly property var layout: Model.clockLayout(Model.clockText(fill.now, fill.clockHours), fill.width, fill.height, fill.clockDate)
+    readonly property var layout: Art.clockLayout(Art.clockText(fill.now, fill.clockHours), fill.width, fill.height, fill.clockDate)
     readonly property real cell: layout.cell
     visible: fill.mode === "clock" && cell >= 1
     width: layout.spanColumns * cell
@@ -128,7 +129,7 @@ Rectangle {
     // One set of blocks, moved into place each minute rather than made
     // anew; those the time does not need stay hidden.
     Repeater {
-      model: clock.visible ? Model.CLOCK_CELLS : 0
+      model: clock.visible ? Art.CLOCK_CELLS : 0
       Rectangle {
         required property int index
         readonly property var cell: clock.layout.cells[index]
@@ -181,7 +182,7 @@ Rectangle {
   Timer {
     running: clock.visible || logo.visible || fill.mode === "stats"
     repeat: true
-    interval: (clock.visible ? Model.untilNextMinute(fill.now) : Model.untilNextShift(fill.now)) + 50
+    interval: (clock.visible ? Art.untilNextMinute(fill.now) : Art.untilNextShift(fill.now)) + 50
     onTriggered: fill.now = new Date()
     // Deferred: the clock's `visible` reads its layout, which reads `now`.
     onRunningChanged: if (running) Qt.callLater(function() { fill.now = new Date() })

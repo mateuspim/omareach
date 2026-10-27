@@ -1,5 +1,7 @@
 import { load } from "./qmljs.js"
 
+export { run } from "./run.js"
+
 // The stats scripts are QML `.pragma library` scripts, loaded like Model.js,
 // each given the modules its `.import` lines name.
 export const Format = load("StatsFormat.js")
@@ -102,12 +104,3 @@ filled = Stats.step(filled, frame(11, [150, 0, 0, 950, 0, 0, 0, 0, 0, 0], "@proc
   "0, NVIDIA GeForce RTX 4080, 55, 7551, 16376, 54, 149.65, 320.00, 2790, 30, 0, 12",
   { identity: "Spotify", title: "Song", artist: "Band", album: "Record", art: "", playing: true, position: 10, length: 200 })
 export const full = filled
-
-// Runs `tests` ({ name: function }) and exits non-zero if any failed.
-export function run(tests) {
-  let failed = 0
-  for (const [name, test] of Object.entries(tests)) {
-    try { test(); console.log("ok   " + name) } catch (error) { failed++; console.log("FAIL " + name + "\n     " + error.message) }
-  }
-  process.exit(failed ? 1 : 0)
-}

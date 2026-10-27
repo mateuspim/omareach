@@ -6,6 +6,7 @@ import Quickshell.Services.UPower
 import qs.Commons
 import qs.Commons as Commons
 import "Model.js" as Model
+import "ModelArt.js" as Art
 import "Stats.js" as Stats
 import "StatsFormat.js" as Format
 import "StatsGpu.js" as Gpu
@@ -239,7 +240,7 @@ QtObject {
     foreground: hex(Commons.Color.foreground), background: hex(Commons.Color.background),
     accent: hex(Commons.Color.accent), urgent: hex(Commons.Color.urgent), muted: hex(Commons.Color.muted)
   })
-  function hex(color) { return Model.hexColor(color.r, color.g, color.b) }
+  function hex(color) { return Art.hexColor(color.r, color.g, color.b) }
 
   property FileView themeFile: FileView {
     path: Commons.Color.currentThemePath + "/colors.toml"

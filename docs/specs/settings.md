@@ -2,7 +2,7 @@
 
 OmaReach keeps everything it remembers in one JSON file,
 `~/.config/omarchy/omareach.json`. `ReserveState.qml` reads, writes and
-watches it; `Model.js` normalizes every value read from it. This page is
+watches it; the `Model*.js` scripts normalize every value read from it. This page is
 the contract for that file, taken from the code.
 
 ## Example

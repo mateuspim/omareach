@@ -6,13 +6,16 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "." as Reserve
 import "Model.js" as Model
+import "ModelArt.js" as Art
+import "ModelEdges.js" as Edges
+import "ModelProfiles.js" as Profiles
 
 // Shared reservation state for the service (black caps) and every bar widget
 // instance. Edits land here first so all surfaces update in the same frame;
 // the JSON file is only persistence and a hook for hand edits.
 //
 // Callers name monitors by connector (DP-4). Entries are stored under the
-// key from Model.outputKeys, which follows the monitor across connectors;
+// key from Profiles.outputKeys, which follows the monitor across connectors;
 // entries saved under a connector name are still read and move to the new
 // key on the next edit.
 QtObject {
@@ -31,16 +34,16 @@ QtObject {
   // just that it is on. Off by default: the dashboard is on screen for
   // anyone in the room.
   property bool statsTunnelAddress: false
-  // Named snapshots of `outputs` (Model.snapshot), saved beside it.
+  // Named snapshots of `outputs` (Profiles.snapshot), saved beside it.
   property var profiles: ({})
   // Profiles applied by themselves when exactly a set of monitors is
-  // connected, as { name: [storage keys] } (Model.autoProfiles).
+  // connected, as { name: [storage keys] } (Profiles.autoProfiles).
   property var autoProfiles: ({})
   // The storage keys of the connected monitors, and the set last seen,
   // which is saved: a shell restart with the same monitors keeps the
   // edits made since, while a different set (docking, or booting docked
   // after a session without the dock) applies its automatic profile.
-  readonly property var connected: Model.monitorSet(keys)
+  readonly property var connected: Profiles.monitorSet(keys)
   property var lastMonitors: []
   property bool loaded: false
   onConnectedChanged: monitorTimer.restart()
@@ -48,7 +51,7 @@ QtObject {
   // holding the same entries. Never saved.
   property string lastProfile: ""
   // The profile `outputs` matches right now, or "".
-  readonly property string currentProfile: Model.currentProfile(profiles, outputs, lastProfile)
+  readonly property string currentProfile: Profiles.currentProfile(profiles, outputs, lastProfile)
   // The monitor showing the calibration ruler, or "". Never saved.
   property string ruler: ""
 
@@ -64,7 +67,7 @@ QtObject {
     var pairs = []
     for (var i = 0; i < monitors.length; i++)
       pairs.push({ name: monitors[i].name, description: monitors[i].description })
-    return Model.outputKeys(pairs)
+    return Profiles.outputKeys(pairs)
   }
 
   // Texts this instance wrote in the last few seconds, as { text, time }.
@@ -151,7 +154,7 @@ QtObject {
   // aligned by `align`; nothing when the monitor's size is unknown.
   function setAspect(output, width, height, aspect, align) {
     if (!(width > 0 && height > 0 && aspect > 0)) return
-    update(output, Object.assign({ enabled: true }, Model.aspectEdges(width, height, aspect, align)))
+    update(output, Object.assign({ enabled: true }, Edges.aspectEdges(width, height, aspect, align)))
   }
 
   function setDim(output, percent) { update(output, { dim: Model.dimPercent(percent) }) }
@@ -176,7 +179,7 @@ QtObject {
   // Saves every monitor's entry as profile `name`, replacing one of that
   // name. Returns the name it saved under, or "" for a blank name.
   function saveProfile(name) {
-    name = Model.findProfile(profiles, name) || Model.profileName(name)
+    name = Profiles.findProfile(profiles, name) || Profiles.profileName(name)
     if (!name) return ""
     setProfile(name, outputs)
     lastProfile = name
@@ -186,7 +189,7 @@ QtObject {
   // Stores `map` as profile `name` as it is, for saving or undoing a delete.
   function setProfile(name, map) {
     var next = Object.assign({}, profiles)
-    next[name] = Model.snapshot(map)
+    next[name] = Profiles.snapshot(map)
     profiles = next
     saveTimer.restart()
   }
@@ -194,7 +197,7 @@ QtObject {
   // Makes the saved entries exactly what profile `name` holds. Returns the
   // profile's name, or "" when there is none by that name.
   function applyProfile(name) {
-    name = Model.findProfile(profiles, name)
+    name = Profiles.findProfile(profiles, name)
     if (!name) return ""
     lastProfile = name
     setOutputs(profiles[name])
@@ -202,7 +205,7 @@ QtObject {
   }
 
   function deleteProfile(name) {
-    name = Model.findProfile(profiles, name)
+    name = Profiles.findProfile(profiles, name)
     if (!name) return ""
     var next = Object.assign({}, profiles)
     delete next[name]
@@ -217,7 +220,7 @@ QtObject {
   function setAutoProfile(name, set) {
     var next = {}
     for (var other in autoProfiles)
-      if (other !== name && !(set.length && Model.sameSet(autoProfiles[other], set))) next[other] = autoProfiles[other]
+      if (other !== name && !(set.length && Profiles.sameSet(autoProfiles[other], set))) next[other] = autoProfiles[other]
     if (set.length && profiles[name] !== undefined) next[name] = set.slice().sort()
     if (JSON.stringify(next) === JSON.stringify(autoProfiles)) return
     autoProfiles = next
@@ -227,29 +230,29 @@ QtObject {
   // Ties profile `name` to the monitors connected now, or unties it.
   // Returns the profile's name, or "" when there is none by that name.
   function setAuto(name, on) {
-    name = Model.findProfile(profiles, name)
+    name = Profiles.findProfile(profiles, name)
     if (!name) return ""
     setAutoProfile(name, on ? connected : [])
     return name
   }
 
   function isAuto(name) {
-    return autoProfiles[name] !== undefined && Model.sameSet(autoProfiles[name], connected)
+    return autoProfiles[name] !== undefined && Profiles.sameSet(autoProfiles[name], connected)
   }
 
   // Once the monitors settle after a change, a new set applies its
   // automatic profile.
   function checkMonitors() {
-    if (!loaded || !connected.length || Model.sameSet(connected, lastMonitors)) return
+    if (!loaded || !connected.length || Profiles.sameSet(connected, lastMonitors)) return
     lastMonitors = connected
     saveTimer.restart()
-    var name = Model.autoProfileFor(autoProfiles, connected)
+    var name = Profiles.autoProfileFor(autoProfiles, connected)
     if (name) applyProfile(name)
   }
 
   // Replaces every saved entry at once, for a profile or undoing one.
   function setOutputs(map) {
-    if (Model.sameOutputs(map, outputs)) return
+    if (Profiles.sameOutputs(map, outputs)) return
     outputs = JSON.parse(JSON.stringify(map || {}))
     saveTimer.restart()
   }
@@ -264,7 +267,7 @@ QtObject {
     delete next[key]
     delete next[output]
     var kept = { fill: current.fill, clockEdge: current.clockEdge, clockHours: current.clockHours, clockDate: current.clockDate, dim: current.dim, panels: current.panels }
-    if (!Model.isDefault(kept)) next[key] = kept
+    if (!Profiles.isDefault(kept)) next[key] = kept
     outputs = next
     saveTimer.restart()
   }
@@ -317,9 +320,9 @@ QtObject {
       idleBlack = Model.idleSeconds(parsed && parsed.idleBlack)
       statsPace = Model.statsPace(parsed && parsed.statsPace)
       statsTunnelAddress = (parsed && parsed.statsTunnelAddress) === true
-      profiles = Model.profiles(parsed && parsed.profiles)
-      autoProfiles = Model.autoProfiles(parsed && parsed.autoProfiles, profiles)
-      lastMonitors = Model.keyList(parsed && parsed.monitors)
+      profiles = Profiles.profiles(parsed && parsed.profiles)
+      autoProfiles = Profiles.autoProfiles(parsed && parsed.autoProfiles, profiles)
+      lastMonitors = Profiles.keyList(parsed && parsed.monitors)
     } catch (error) {
       console.warn("omareach: invalid state file: " + error)
     }
@@ -418,7 +421,7 @@ QtObject {
   property FileView iconFile: FileView {
     path: (Quickshell.env("OMARCHY_PATH") || "/usr/share/omarchy") + "/icon.txt"
     printErrors: false
-    onLoaded: root.iconArt = Model.blockBitmap(text())
+    onLoaded: root.iconArt = Art.blockBitmap(text())
   }
   property var iconArt: null
 

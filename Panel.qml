@@ -6,6 +6,8 @@ import qs.Commons
 import qs.Commons as Commons
 import "." as Reserve
 import "Model.js" as Model
+import "ModelEdges.js" as Edges
+import "ModelProfiles.js" as Profiles
 
 // Bar button plus popout for editing reserved display edges. Edits go
 // straight into ReserveState, so the caps, the bar and tiled windows move
@@ -67,7 +69,7 @@ Panel {
   // it restores.
   property var undo: null
   readonly property bool canUndo: undo !== null && (undo.output === undefined || undo.output === output)
-  readonly property var profileNames: Model.profileNames(reserve.profiles)
+  readonly property var profileNames: Profiles.profileNames(reserve.profiles)
   property bool showKeys: false
   // The page showing below the preview. It is kept while the shell runs,
   // so the panel opens where it was left.
@@ -85,8 +87,8 @@ Panel {
   readonly property real screenWidth: outputScreen ? outputScreen.width : 0
   readonly property real screenHeight: outputScreen ? outputScreen.height : 0
   property string pickedAlign: ""
-  readonly property string align: pickedAlign || Model.inferAlign(edge, screenWidth, screenHeight)
-  readonly property string aspect: edge.enabled ? Model.matchingAspect(edge, screenWidth, screenHeight, align) : ""
+  readonly property string align: pickedAlign || Edges.inferAlign(edge, screenWidth, screenHeight)
+  readonly property string aspect: edge.enabled ? Edges.matchingAspect(edge, screenWidth, screenHeight, align) : ""
 
   // Keyboard cursor over the four edge rows.
   property int cursor: 0
@@ -206,17 +208,17 @@ Panel {
   }
 
   function fitted(entry, screen) {
-    return screen ? Model.fit(entry, screen.width, screen.height) : entry
+    return screen ? Edges.fit(entry, screen.width, screen.height) : entry
   }
   function limit(side) {
-    return Model.limit(side, outputScreen ? outputScreen.width : 0, outputScreen ? outputScreen.height : 0, edge[Model.opposite(side)])
+    return Edges.limit(side, outputScreen ? outputScreen.width : 0, outputScreen ? outputScreen.height : 0, edge[Model.opposite(side)])
   }
   function setEdge(side, pixels) {
     var value = Model.clamp(Model.pixels(pixels), 0, limit(side))
     if (value !== edge[side]) undo = null
     reserve.setEdge(output, side, value)
   }
-  function nudge(side, delta) { setEdge(side, Model.nudge(edge[side], delta, limit(side))) }
+  function nudge(side, delta) { setEdge(side, Edges.nudge(edge[side], delta, limit(side))) }
   function toggleEnabled(name) {
     if (!reserve.isReserved(name)) return
     undo = null
@@ -257,7 +259,7 @@ Panel {
     name = reserve.applyProfile(name)
     if (!name) return
     profileDraft = name
-    if (Model.sameOutputs(before, reserve.outputs)) return
+    if (Profiles.sameOutputs(before, reserve.outputs)) return
     undo = { outputs: before, text: "Restore every monitor as before " + name + (from ? ", " + from : "") }
   }
   function applyProfileAt(index) { if (index < profileNames.length) applyProfile(profileNames[index]) }
@@ -269,7 +271,7 @@ Panel {
     var entries = reserve.profiles[name]
     var auto = reserve.autoProfiles[name]
     if (!reserve.deleteProfile(name)) return
-    if (Model.profileName(profileDraft) === name) profileDraft = ""
+    if (Profiles.profileName(profileDraft) === name) profileDraft = ""
     undo = { profile: name, entries: entries, auto: auto, text: "Restore the profile " + name }
   }
   function setFill(fill) {
@@ -283,7 +285,7 @@ Panel {
     var before = reserve.outputs
     var settings = { fill: fill, dim: edge.dim, clockEdge: edge.clockEdge, clockHours: edge.clockHours, clockDate: edge.clockDate, panels: edge.panels }
     screenNames.forEach(function(name) { reserve.update(name, settings) })
-    if (!Model.sameOutputs(before, reserve.outputs))
+    if (!Profiles.sameOutputs(before, reserve.outputs))
       undo = { outputs: before, text: "Restore each monitor's own fill" }
   }
   function setDim(percent) {
@@ -319,20 +321,20 @@ Panel {
     var before = reserve.outputs
     var on = edge.panels.indexOf(panel) === -1
     screenNames.forEach(function(name) { reserve.togglePanel(name, panel, on) })
-    if (!Model.sameOutputs(before, reserve.outputs))
+    if (!Profiles.sameOutputs(before, reserve.outputs))
       undo = { outputs: before, text: "Restore each monitor's own stats panels" }
   }
   // Replaces every edge, so it can be undone like Clear.
   function applyAspect(ratio) {
     if (!outputScreen) return
     var saved = outputUndo()
-    reserve.setAspect(output, screenWidth, screenHeight, Model.parseAspect(ratio), align)
+    reserve.setAspect(output, screenWidth, screenHeight, Edges.parseAspect(ratio), align)
     undo = Model.same(saved.entry, reserve.edges(output)) ? undo : saved
   }
   // Moves the reachable area along, and with it a preset that is in use.
   function cycleAlign() {
     var current = aspect
-    pickedAlign = Model.nextAlign(align)
+    pickedAlign = Edges.nextAlign(align)
     if (current) applyAspect(current)
   }
   function toggleRuler() { reserve.toggleRuler(output) }
