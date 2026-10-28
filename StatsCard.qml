@@ -31,7 +31,9 @@ Item {
   property int badge: 0
   property bool picked: false
   property string fontFamily: Style.font.family
-  readonly property bool wide: width > height * Views.WIDE_CARD
+  // The panel it draws, for the Clock's rule of when to go wide.
+  property string panel: ""
+  readonly property bool wide: Views.wideCard(panel, width, height, unit)
   // Omarchy's icon beside a view that asks for it (System), as fastfetch
   // shows the distro's: as tall as the body, when that leaves the rows
   // room enough (a label and a short value, about 13 units).
@@ -181,7 +183,8 @@ Item {
       Layout.fillHeight: card.wide || card.shown.graphs.length > 0 || card.shown.digits !== ""
       Layout.alignment: Qt.AlignTop
       // Side by side the rows' text needs more of the width than the graph.
-      Layout.preferredWidth: 2
+      // The Clock's digits take what its short rows leave.
+      Layout.preferredWidth: card.shown.digits !== "" ? 5 : 2
       spacing: Math.round(card.unit * 0.4)
       visible: card.shown.digits !== "" || card.shown.value !== "" || card.shown.graphs.length > 0 || card.shown.bars.length > 0 || card.shown.stack.length > 0
 
@@ -210,13 +213,20 @@ Item {
           // height on a stacked card, where the rows sit below.
           var top = card.wide ? 0 : Math.floor((height - cell * bitmap.rows) / 2)
           ctx.fillStyle = tint
-          // A block reaches a pixel into a lit neighbour: at a fractional
-          // scale (1.67) blocks that only touch leave hairline seams.
+          // Each row's run of lit blocks as one rectangle, reaching a pixel
+          // into a lit row below: at a fractional scale (1.67) blocks that
+          // only touch leave hairline seams.
           var lit = {}
           for (var i = 0; i < bitmap.cells.length; i++) lit[bitmap.cells[i].x + "," + bitmap.cells[i].y] = true
-          for (var j = 0; j < bitmap.cells.length; j++) {
-            var c = bitmap.cells[j]
-            ctx.fillRect(c.x * cell, top + c.y * cell, cell + (lit[(c.x + 1) + "," + c.y] ? 1 : 0), cell + (lit[c.x + "," + (c.y + 1)] ? 1 : 0))
+          for (var y = 0; y < bitmap.rows; y++) {
+            for (var x = 0; x < bitmap.columns; x++) {
+              if (!lit[x + "," + y]) continue
+              var end = x
+              var below = false
+              while (lit[end + "," + y]) { if (lit[end + "," + (y + 1)]) below = true; end++ }
+              ctx.fillRect(x * cell, top + y * cell, (end - x) * cell, cell + (below ? 1 : 0))
+              x = end
+            }
           }
         }
       }
@@ -384,7 +394,7 @@ Item {
       Layout.fillWidth: true
       Layout.fillHeight: card.wide
       Layout.preferredWidth: 3
-      Layout.maximumWidth: card.unit * 32
+      Layout.maximumWidth: card.unit * (card.shown.digits !== "" ? 24 : 32)
       Layout.alignment: Qt.AlignTop
       spacing: Math.round(card.unit * 0.35)
       visible: card.shown.rows.length > 0 || card.shown.lists.length > 0

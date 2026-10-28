@@ -141,6 +141,12 @@ Under it, in the order a short card drops them from the end:
   +12h"). Without them, the card's corner names this machine's zone.
 - **Sun**: today's sunrise and sunset, or "No sunset today" in a polar
   summer.
+- **Today** and **Year**: meters for how much of the day and of the year
+  has gone.
+
+The digits sit beside the rows only on a very wide card (a whole
+strip's width); a narrower one puts them over the rows, as big as the
+card allows, rather than squeeze them into a column.
 
 Under **Clock · every monitor** on the Stats page (shown while this
 monitor's dashboard has the Clock), click **Add zone** to search tzdata's

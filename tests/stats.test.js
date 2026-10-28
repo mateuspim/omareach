@@ -1470,7 +1470,10 @@ Object.assign(tests, {
     assert.equal(view.value, "")
     assert.equal(view.valueColor, palette.boxes.clock)
     assert.equal(view.info, "Lisbon")
-    assert.deepEqual(plain(view.rows.map(row => row.label)), ["Date", "Week"])
+    assert.deepEqual(plain(view.rows.map(row => row.label)), ["Date", "Week", "Today"])
+    // The day's meter is in the Clock's color.
+    assert.equal(view.rows[2].color, palette.boxes.clock)
+    assert.ok(view.rows[2].fraction > 0.58 && view.rows[2].fraction < 0.59)
     // A short card keeps the date, leaving the week; a narrow one the
     // minutes alone.
     assert.deepEqual(plain(Views.view("clock", clockState, palette, 4, false, 30).rows.map(row => row.label)), ["Date"])
@@ -1482,6 +1485,14 @@ Object.assign(tests, {
     assert.equal(withZone.rows[2].label, "Tokyo")
     assert.equal(withZone.rows[2].tip, "Asia/Tokyo")
     assert.equal(Views.view("clock", full, palette).empty, "Waiting for data")
+  },
+  "a Clock card goes wide only when its digits keep their size"() {
+    // Half of the portrait strip: stacked, digits across the width.
+    assert.equal(Views.wideCard("clock", 500, 200, 12), false)
+    assert.equal(Views.wideCard("gpu", 500, 200, 12), true)
+    // The whole strip: beside its rows.
+    assert.equal(Views.wideCard("clock", 1000, 200, 12), true)
+    assert.equal(Views.wideCard("clock", 300, 200, 12), false)
   },
   "eleven panels with the Clock still fit the portrait strip"() {
     // The owner's portable display: 648x1152 at 1.67, stats on 750 px.

@@ -199,6 +199,18 @@ function parseReminders(text) {
     .sort(function(a, b) { return a.at - b.at })
 }
 
+// How much of `date`'s day has gone, 0 at midnight.
+function dayFraction(date) {
+  return (date.getHours() * 3600 + date.getMinutes() * 60 + date.getSeconds()) / 86400
+}
+
+// How much of `date`'s year has gone, 0 at midnight on 1 Jan: the days
+// before today and today's share, over 365 or 366.
+function yearFraction(date) {
+  var days = dayOfYear(new Date(date.getFullYear(), 11, 31))
+  return (dayOfYear(date) - 1 + dayFraction(date)) / days
+}
+
 // Time left, to the second under a minute and to the minute under an
 // hour: "45s", "12m 05s", "1h 05m".
 function formatCountdown(seconds) {
@@ -248,6 +260,12 @@ function clockFacts(clock, hours, span, wide) {
       : "↑ " + clockDigits(new Date(sun.rise), hours, false) + "  ↓ " + clockDigits(new Date(sun.set), hours, false)
     facts.rows.push({ label: "Sun", text: text })
   }
+  // How far through the day and the year, as btop-style meters: they fill
+  // a card's spare rows with something that moves.
+  var today = dayFraction(date)
+  facts.rows.push({ label: "Today", text: Math.floor(today * 100) + "%", fraction: today })
+  var year = yearFraction(date)
+  facts.rows.push({ label: "Year", text: Math.floor(year * 100) + "%", fraction: year })
   return facts
 }
 

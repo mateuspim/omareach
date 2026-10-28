@@ -271,6 +271,19 @@ function availablePanels(panels, state) {
   return panels.filter(function(panel) { return available(panel, state) })
 }
 
+// Units of width under which a wide Clock card stacks its digits over its
+// rows like a narrow card: beside them, the digits share the width with
+// the rows and came out a few pixels high on a half-width card.
+var CLOCK_BESIDE_SPAN = 44
+
+// Whether a card puts its headline beside its rows: past WIDE_CARD for
+// its height, and for the Clock only when wide enough that its digits
+// keep their size.
+function wideCard(panel, width, height, unit) {
+  if (!(width > height * WIDE_CARD)) return false
+  return panel !== "clock" || width >= CLOCK_BESIDE_SPAN * unit
+}
+
 // Rows' room each part of a stacked card's headline takes: the big value,
 // a graph at its smallest, the per-core bars, the stacked bar, and the gap
 // below them. A row is a line of text and its spacing.
@@ -732,7 +745,7 @@ var VIEWS = {
     v.digits = facts.digits
     v.valueColor = palette.boxes.clock
     facts.rows.forEach(function(fact) {
-      var r = row(fact.label, fact.text, null)
+      var r = row(fact.label, fact.text, fact.fraction, palette.boxes.clock)
       if (fact.tip) r.tip = fact.tip
       v.rows.push(r)
     })

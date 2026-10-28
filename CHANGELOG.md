@@ -8,8 +8,10 @@
   fill's blocky digits (with seconds on a wide card), the date, the ISO
   week and day of the year, the next Omarchy reminder counting down, up
   to three other time zones ("Tokyo 13:37 · +12h", with the day when it
-  is not today here) and sunrise and sunset. A short card drops them
-  from the end. It follows the monitor's 12-hour setting, which the Fill
+  is not today here), sunrise and sunset, and meters for how much of the
+  day and the year has gone. A short card drops them from the end; a
+  card less than very wide stacks its digits over its rows, so they keep
+  their size. It follows the monitor's 12-hour setting, which the Fill
   page now offers for a dashboard with the Clock panel too.
 - **Time zones and the sun** for the Clock panel, on the Stats page and
   over IPC (`zones`, `location`): zones are picked from tzdata's list,

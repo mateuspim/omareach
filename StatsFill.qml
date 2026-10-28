@@ -54,6 +54,7 @@ Item {
         width: Math.round(modelData.width)
         height: Math.round(modelData.height)
         unit: root.unit
+        panel: modelData.panel
         theme: root.sampler.palette
         badge: root.cardKeys ? root.panels.indexOf(modelData.panel) + 1 : 0
         picked: root.cardKeys && modelData.panel === root.cardPicked
@@ -61,7 +62,7 @@ Item {
         // panels whose lists grow to fill the card.
         readonly property int room: Math.floor((height - Math.round(root.unit * 1.6) - root.unit)
           / (Math.round(root.unit * 1.25) + Math.round(root.unit * 0.35)))
-        view: Views.view(modelData.panel, modelData.panel === "clock" ? root.clockState : root.sampler.data, root.sampler.palette, room, width > height * Views.WIDE_CARD, Math.floor(width / root.unit), root.laidOut)
+        view: Views.view(modelData.panel, modelData.panel === "clock" ? root.clockState : root.sampler.data, root.sampler.palette, room, Views.wideCard(modelData.panel, width, height, root.unit), Math.floor(width / root.unit), root.laidOut)
       }
     }
   }

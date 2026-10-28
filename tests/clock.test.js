@@ -104,6 +104,14 @@ const tests = {
     assert.deepEqual(plain(Clock.parseReminders("not json")), [])
     assert.deepEqual(plain(Clock.parseReminders('{"count":0}')), [])
   },
+  "dayFraction and yearFraction measure how much has gone"() {
+    assert.equal(Clock.dayFraction(new Date(2026, 9, 28, 0, 0, 0)), 0)
+    assert.equal(Clock.dayFraction(new Date(2026, 9, 28, 12, 0, 0)), 0.5)
+    assert.equal(Clock.yearFraction(new Date(2026, 0, 1, 0, 0)), 0)
+    assert.equal(Clock.yearFraction(new Date(2026, 6, 2, 12, 0)), 182.5 / 365)
+    // A leap year has a day more.
+    assert.equal(Clock.yearFraction(new Date(2028, 11, 31, 12, 0)), 365.5 / 366)
+  },
   "formatCountdown reads to the second, then the minute"() {
     assert.equal(Clock.formatCountdown(44.2), "45s")
     assert.equal(Clock.formatCountdown(725), "12m 05s")
@@ -119,7 +127,7 @@ const tests = {
       location: { lat: 38.72, lon: -9.14 }
     }, 24, 30, false)
     assert.equal(facts.digits, "14:05:30")
-    assert.deepEqual(plain(facts.rows.map(r => r.label)), ["Date", "Week", "Tea", "Tokyo", "Sun"])
+    assert.deepEqual(plain(facts.rows.map(r => r.label)), ["Date", "Week", "Tea", "Tokyo", "Sun", "Today", "Year"])
     assert.equal(facts.rows[0].text, "Wed 28 Oct")
     assert.equal(facts.rows[1].text, "W44  ·  day 301")
     // A reminder that went off is gone; the rest count down.
@@ -130,7 +138,8 @@ const tests = {
     // A narrow card leaves out the seconds; the locale's date wins.
     const narrow = Clock.clockFacts({ now, dateText: "qua 28 out", zones: [], reminders: [], location: null }, 12, 20, false)
     assert.equal(narrow.digits, "2:05")
-    assert.deepEqual(plain(narrow.rows.map(r => r.text)), ["qua 28 out", "W44  ·  day 301"])
+    assert.deepEqual(plain(narrow.rows.map(r => r.text)), ["qua 28 out", "W44  ·  day 301", "58%", "82%"])
+    assert.equal(narrow.rows[2].fraction, Clock.dayFraction(new Date(now)))
   },
   "zones.sh prints each zone's offset and leaves out bad names"() {
     // Etc zones never change offset, so the test holds all year.
