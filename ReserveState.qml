@@ -6,6 +6,7 @@ import Quickshell.Io
 import Quickshell.Hyprland
 import "." as Reserve
 import "Model.js" as Model
+import "Clock.js" as Clock
 
 // Shared reservation state for the service (black caps) and every bar widget
 // instance. Edits land here first so all surfaces update in the same frame;
@@ -31,6 +32,12 @@ QtObject {
   // just that it is on. Off by default: the dashboard is on screen for
   // anyone in the room.
   property bool statsTunnelAddress: false
+  // The Clock panel's other time zones (Clock.zoneList), and where it
+  // works out sunrise and sunset (Clock.location), or null for no sun.
+  // One setting for every monitor: the zones and the sun are the user's,
+  // not a monitor's.
+  property var statsZones: []
+  property var statsLocation: null
   // Named snapshots of `outputs` (Model.snapshot), saved beside it.
   property var profiles: ({})
   // Profiles applied by themselves when exactly a set of monitors is
@@ -145,6 +152,20 @@ QtObject {
     saveTimer.restart()
   }
 
+  function setStatsZones(zones) {
+    var list = Clock.zoneList(zones)
+    if (String(list) === String(statsZones)) return
+    statsZones = list
+    saveTimer.restart()
+  }
+
+  function setStatsLocation(place) {
+    var value = Clock.location(place)
+    if (JSON.stringify(value) === JSON.stringify(statsLocation)) return
+    statsLocation = value
+    saveTimer.restart()
+  }
+
   function toggleRuler(output) { ruler = ruler === output ? "" : output }
 
   // The edges that give `output` a reachable area of `aspect` (a number),
@@ -172,6 +193,10 @@ QtObject {
     update(output, { clockHours: hours })
   }
   function setClockDate(output, on) { update(output, { clockDate: on === true }) }
+  function setClockSeconds(output, seconds) {
+    if (Model.CLOCK_SECONDS.indexOf(seconds) === -1) return
+    update(output, { clockSeconds: seconds })
+  }
 
   // Saves every monitor's entry as profile `name`, replacing one of that
   // name. Returns the name it saved under, or "" for a blank name.
@@ -263,7 +288,7 @@ QtObject {
     var next = Object.assign({}, outputs)
     delete next[key]
     delete next[output]
-    var kept = { fill: current.fill, clockEdge: current.clockEdge, clockHours: current.clockHours, clockDate: current.clockDate, dim: current.dim, panels: current.panels }
+    var kept = { fill: current.fill, clockEdge: current.clockEdge, clockHours: current.clockHours, clockDate: current.clockDate, clockSeconds: current.clockSeconds, dim: current.dim, panels: current.panels }
     if (!Model.isDefault(kept)) next[key] = kept
     outputs = next
     saveTimer.restart()
@@ -288,6 +313,8 @@ QtObject {
     if (idleBlack) state.idleBlack = idleBlack
     if (statsPace !== Model.STATS_PACE) state.statsPace = statsPace
     if (statsTunnelAddress) state.statsTunnelAddress = true
+    if (statsZones.length) state.statsZones = statsZones
+    if (statsLocation) state.statsLocation = statsLocation
     if (Object.keys(profiles).length) state.profiles = profiles
     if (Object.keys(autoProfiles).length) state.autoProfiles = autoProfiles
     if (lastMonitors.length) state.monitors = lastMonitors
@@ -317,6 +344,8 @@ QtObject {
       idleBlack = Model.idleSeconds(parsed && parsed.idleBlack)
       statsPace = Model.statsPace(parsed && parsed.statsPace)
       statsTunnelAddress = (parsed && parsed.statsTunnelAddress) === true
+      statsZones = Clock.zoneList(parsed && parsed.statsZones)
+      statsLocation = Clock.location(parsed && parsed.statsLocation)
       profiles = Model.profiles(parsed && parsed.profiles)
       autoProfiles = Model.autoProfiles(parsed && parsed.autoProfiles, profiles)
       lastMonitors = Model.keyList(parsed && parsed.monitors)
@@ -340,6 +369,8 @@ QtObject {
       root.idleBlack = 0
       root.statsPace = Model.STATS_PACE
       root.statsTunnelAddress = false
+      root.statsZones = []
+      root.statsLocation = null
       root.profiles = ({})
       root.autoProfiles = ({})
       root.lastMonitors = []
@@ -403,6 +434,9 @@ QtObject {
     batteries: root.statsPanels.indexOf("battery") !== -1
     pace: root.statsPace
     tunnelAddress: root.statsTunnelAddress
+    clock: root.statsPanels.indexOf("clock") !== -1
+    zones: root.statsZones
+    location: root.statsLocation
   }
 
   // The Omarchy logo's SVG source, for the logo fill to recolor.

@@ -12,14 +12,15 @@ indexes the rest; update the spec a change touches.
 
 ## Project
 
-- Layout: every `.qml` and `.js` file, `stats.sh`, `vpn.sh` and
+- Layout: every `.qml` and `.js` file, `stats.sh`, `vpn.sh`, `zones.sh` and
   `cpu-power.sh` at the root. Omarchy loads the entry points in
   `manifest.json` (`Service.qml`, `Panel.qml`); QML finds siblings through
   `qmldir`, so a new component goes in `qmldir` too. Don't add QML subfolders. Tests in `tests/`, guide images
   in `docs/`.
 - Logic that can live without QML goes in `Model.js` (reserves, profiles,
-  fills), `Stats.js` (the dashboard's data) or `StatsViews.js` (its
-  layout and panels), so Node can test it. `tests/qmljs.js` loads them.
+  fills), `Stats.js` (the dashboard's data), `StatsViews.js` (its
+  layout and panels) or `Clock.js` (the Clock panel's dates, zones and
+  sun), so Node can test it. `tests/qmljs.js` loads them.
 - Naming: OmaReach everywhere: plugin id and IPC target `pym.omareach`,
   layer namespaces `pym-omareach*`, settings `~/.config/omarchy/omareach.json`,
   log prefix `omareach:`. Never reintroduce `display-reserve` or

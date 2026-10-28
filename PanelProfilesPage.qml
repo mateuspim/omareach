@@ -43,8 +43,12 @@ Column {
   }
   // Deleting can be undone, like a right click. Returns where the cursor
   // goes: the next profile, or the field once none is left.
+  // What the last remove() did, for the panel's toast; "" for nothing.
+  property string removed: ""
   function remove(index) {
+    removed = ""
     if (index >= fieldAt) return index
+    removed = "Deleted " + panel.profileNames[index]
     panel.deleteProfile(panel.profileNames[index])
     return Math.min(index, fieldAt)
   }

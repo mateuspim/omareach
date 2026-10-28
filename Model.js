@@ -13,12 +13,13 @@ var SINGLE_FILLS = ["clock", "stats"]
 // shows its own choice of them in its own order, and the dashboard drops
 // them from the end of that order when the strip runs out of room.
 // `temps` is the Sensors panel: its key predates the fans joining it.
-var STATS_PANELS = ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system"]
+var STATS_PANELS = ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system", "clock"]
 var STATS_DEFAULT = ["gpu", "cpu", "memory", "network"]
-var PANEL_NAMES = { gpu: "GPU", igpu: "iGPU", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System" }
+var PANEL_NAMES = { gpu: "GPU", igpu: "iGPU", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", clock: "Clock" }
 // Other names IPC accepts for a panel.
 var PANEL_ALIASES = { mem: "memory", ram: "memory", net: "network", disk: "disks", io: "disks", procs: "processes", "top processes": "processes", fan: "temps", fans: "temps", integrated: "igpu",
-  temperatures: "temps", temp: "temps", temps: "temps", sensors: "temps", bat: "battery", music: "media", mpris: "media", nowplaying: "media", uptime: "system" }
+  temperatures: "temps", temp: "temps", temps: "temps", sensors: "temps", bat: "battery", music: "media", mpris: "media", nowplaying: "media", uptime: "system",
+  time: "clock", date: "clock", reminders: "clock", sun: "clock" }
 // Panels of earlier versions, as stored in settings and profiles: the Fans
 // panel became part of Sensors, and the Pressure panel's numbers became
 // rows on the CPU, Memory and Disks panels.
@@ -28,6 +29,10 @@ var RETIRED_PANELS = { fans: "temps", pressure: "" }
 var CLOCK_EDGES = ["largest", "topBottom"]
 // The clock fill's hours: 24-hour, or 12-hour without a leading zero.
 var CLOCK_HOURS = [24, 12]
+// What the clock fill does every second, against burn-in on OLED panels:
+// nothing, the colon blinks, or a bar under the time fills over the minute.
+var CLOCK_SECONDS = ["off", "blink", "bar"]
+var CLOCK_SECONDS_NAMES = { off: "Off", blink: "Blinking colon", bar: "Seconds bar" }
 // How dark the dimmed fill makes the wallpaper, in percent.
 var DIM_DEFAULT = 60
 var DIM_MIN = 10
@@ -70,6 +75,7 @@ function normalize(raw) {
     clockEdge: CLOCK_EDGES.indexOf(entry.clockEdge) !== -1 ? entry.clockEdge : "largest",
     clockHours: CLOCK_HOURS.indexOf(entry.clockHours) !== -1 ? entry.clockHours : 24,
     clockDate: entry.clockDate === true,
+    clockSeconds: CLOCK_SECONDS.indexOf(entry.clockSeconds) !== -1 ? entry.clockSeconds : "off",
     dim: dimPercent(entry.dim),
     panels: panelList(entry.panels)
   }
@@ -216,7 +222,7 @@ function active(raw) {
 // Whether two normalized entries reserve, enable and fill the same.
 function same(a, b) {
   if (a.enabled !== b.enabled || a.fill !== b.fill || a.clockEdge !== b.clockEdge || a.dim !== b.dim) return false
-  if (a.clockHours !== b.clockHours || a.clockDate !== b.clockDate) return false
+  if (a.clockHours !== b.clockHours || a.clockDate !== b.clockDate || a.clockSeconds !== b.clockSeconds) return false
   if (String(a.panels) !== String(b.panels)) return false
   for (var i = 0; i < EDGES.length; i++) if (a[EDGES[i]] !== b[EDGES[i]]) return false
   return true
@@ -364,7 +370,7 @@ function clockBitmap(lines) {
       if (!glyph) continue
       for (var row = 0; row < glyph.length; row++)
         for (var column = 0; column < glyph[row].length; column++)
-          if (glyph[row].charAt(column) === "#") cells.push({ x: x + column, y: top + row })
+          if (glyph[row].charAt(column) === "#") cells.push({ x: x + column, y: top + row, colon: lines[n].charAt(i) === ":" })
       x += glyph[0].length + 1
     }
   }
@@ -448,6 +454,29 @@ function logoStep(width, height) {
 // Milliseconds until the next minute starts, for a clock that ticks on it.
 function untilNextMinute(date) {
   return 60000 - date.getSeconds() * 1000 - date.getMilliseconds()
+}
+
+// The clockSeconds after `mode`, for the panel's button that cycles them.
+function nextClockSeconds(mode) {
+  var index = CLOCK_SECONDS.indexOf(mode)
+  return CLOCK_SECONDS[(index + 1) % CLOCK_SECONDS.length]
+}
+
+// Milliseconds until the next second starts, for a clock with seconds.
+function untilNextSecond(date) {
+  return 1000 - date.getMilliseconds()
+}
+
+// Whether a blinking colon (clockSeconds "blink") is lit: every other
+// second, on the even ones, so it is lit as each minute turns.
+function colonLit(date) {
+  return date.getSeconds() % 2 === 0
+}
+
+// How full the seconds bar (clockSeconds "bar") is: empty as the minute
+// turns, a sixtieth more each second.
+function secondsFraction(date) {
+  return date.getSeconds() / 60
 }
 
 // Milliseconds until clockShift next moves, for the logo, which has no
@@ -572,6 +601,14 @@ function statsPace(value) {
 function nextPace(pace) {
   var index = STATS_PACES.indexOf(statsPace(pace))
   return STATS_PACES[(index + 1) % STATS_PACES.length]
+}
+
+// paceName cut to fit one of five buttons in a row.
+function paceShort(pace) {
+  pace = statsPace(pace)
+  if (pace === 0) return "Display"
+  if (pace === 1) return "Off"
+  return String(pace)
 }
 
 function paceName(pace) {

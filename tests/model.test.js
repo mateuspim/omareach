@@ -11,10 +11,10 @@ vm.runInNewContext(source, Model)
 const tests = {
   "normalize fills missing edges and defaults to enabled"() {
     const { panels, ...entry } = Model.normalize({ top: "350.4", left: -5 })
-    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, clockSeconds: "off", dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
     assert.deepEqual([...panels], ["gpu", "cpu", "memory", "network"])
     const { panels: _, ...empty } = Model.normalize(undefined)
-    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, clockSeconds: "off", dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
   },
   "panels keep known names, once each, in the order given"() {
     assert.deepEqual([...Model.panelList(["network", "gpu", "rainbow", "gpu"])], ["network", "gpu"])
@@ -22,7 +22,7 @@ const tests = {
     assert.deepEqual([...Model.panelList("gpu")], [...Model.STATS_DEFAULT])
     assert.deepEqual([...Model.panelList(undefined)], ["gpu", "cpu", "memory", "network"])
     assert.deepEqual([...Model.normalize({ panels: ["system", "cpu"] }).panels], ["system", "cpu"])
-    assert.deepEqual([...Model.STATS_PANELS], ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system"])
+    assert.deepEqual([...Model.STATS_PANELS], ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system", "clock"])
     assert.equal(Model.panelFrom("Now playing"), "media")
     assert.equal(Model.panelFrom("temperatures"), "temps")
     assert.equal(Model.panelFrom("Sensors"), "temps")
@@ -484,7 +484,7 @@ const tests = {
   "fit trims hand-edited entries to the shared limit"() {
     const fitted = Model.fit(Model.normalize({ top: 5000, bottom: 400, left: 100, right: 100 }), 1080, 1920)
     const { panels, ...edges } = fitted
-    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
+    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, clockSeconds: "off", dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
     const kept = Model.fit(Model.normalize({ top: 400, bottom: 200 }), 1080, 1920)
     assert.equal(kept.top, 400)
     assert.equal(kept.bottom, 200)
@@ -594,6 +594,41 @@ const tests = {
     assert.equal(Model.nudge(5, -10, 100), 0)
     assert.equal(Model.nudge(95, 10, 100), 100)
     assert.equal(Model.nudge(350, 100, 1728), 450)
+  },
+  "normalize keeps the clock's seconds, off by default"() {
+    assert.equal(Model.normalize({}).clockSeconds, "off")
+    assert.equal(Model.normalize({ clockSeconds: "blink" }).clockSeconds, "blink")
+    assert.equal(Model.normalize({ clockSeconds: "bar" }).clockSeconds, "bar")
+    assert.equal(Model.normalize({ clockSeconds: true }).clockSeconds, "off")
+    assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockSeconds: "bar" })))
+    assert.ok(!Model.isDefault({ clockSeconds: "blink" }))
+    assert.equal(Model.nextClockSeconds("off"), "blink")
+    assert.equal(Model.nextClockSeconds("bar"), "off")
+    assert.equal(Model.nextClockSeconds("nonsense"), "off")
+  },
+  "the clock's seconds: a colon lit on even seconds, a bar over the minute"() {
+    assert.equal(Model.colonLit(new Date(2026, 9, 28, 14, 5, 0)), true)
+    assert.equal(Model.colonLit(new Date(2026, 9, 28, 14, 5, 1)), false)
+    assert.equal(Model.secondsFraction(new Date(2026, 9, 28, 14, 5, 0)), 0)
+    assert.equal(Model.secondsFraction(new Date(2026, 9, 28, 14, 5, 30)), 0.5)
+    assert.equal(Model.untilNextSecond(new Date(2026, 9, 28, 14, 5, 30, 250)), 750)
+    // The colon's cells are marked, so a blink can hide only them.
+    const bitmap = Model.clockBitmap("12:34")
+    assert.equal(bitmap.cells.filter(c => c.colon).length, 2)
+    assert.ok(bitmap.cells.filter(c => c.colon).every(c => c.x === 8))
+    assert.equal(Model.clockBitmap(["12", "34"]).cells.filter(c => c.colon).length, 0)
+  },
+  "the Clock panel goes by its name and a few others"() {
+    assert.equal(Model.panelFrom("clock"), "clock")
+    assert.equal(Model.panelFrom("time"), "clock")
+    assert.equal(Model.panelFrom("Clock"), "clock")
+    assert.equal(Model.panelName("clock"), "Clock")
+    // Opt-in: a new monitor's dashboard does not get it.
+    assert.ok(Model.STATS_DEFAULT.indexOf("clock") === -1)
+  },
+  "paceShort names each pace in a word for its button"() {
+    assert.deepEqual([...Model.STATS_PACES].map(Model.paceShort), ["Display", "60", "30", "15", "Off"])
+    assert.equal(Model.paceShort("nonsense"), "30")
   },
 }
 

@@ -24,9 +24,16 @@ Rectangle {
   // time where the edge is tall enough.
   property int clockHours: 24
   property bool clockDate: false
+  // What the clock does every second (Model.CLOCK_SECONDS): nothing, a
+  // blinking colon, or a bar under the time.
+  property string clockSeconds: "off"
+  readonly property bool ticksSeconds: clock.visible && clockSeconds !== "off"
   // The stats fill's panels, and how many strip pixels one screen pixel
   // takes up: 1 on the monitor, the preview's scale in the panel.
   property var panels: []
+  // The panel's preview numbers the stats cards and marks one (StatsFill).
+  property bool cardKeys: false
+  property string cardPicked: ""
   property real pixelRatio: 1
   readonly property bool horizontal: Model.isHorizontal(side)
   // The time the clock shows, and what the clock and the logo shift by
@@ -132,13 +139,25 @@ Rectangle {
       Rectangle {
         required property int index
         readonly property var cell: clock.layout.cells[index]
-        visible: cell !== undefined
-        x: visible ? cell.x * clock.cell : 0
-        y: visible ? cell.y * clock.cell : 0
+        // A blinking colon goes dark on the odd seconds. The time on two
+        // lines (a side edge) has no colon to blink.
+        visible: cell !== undefined && !(cell.colon && fill.clockSeconds === "blink" && !Model.colonLit(fill.now))
+        x: cell !== undefined ? cell.x * clock.cell : 0
+        y: cell !== undefined ? cell.y * clock.cell : 0
         width: clock.cell
         height: clock.cell
         color: fill.clockColor
       }
+    }
+
+    // The seconds bar, in the block of margin under the clock: it fills
+    // over the minute, so no part of it stays lit for long.
+    Rectangle {
+      visible: fill.clockSeconds === "bar"
+      y: clock.height + Math.round(clock.cell * 0.35)
+      width: Math.round(clock.width * Model.secondsFraction(fill.now))
+      height: Math.max(1, Math.round(clock.cell * 0.3))
+      color: fill.clockColor
     }
 
     // In the font rather than in blocks: the glyphs have no letters. It
@@ -170,18 +189,22 @@ Rectangle {
     sourceComponent: Component {
       Reserve.StatsFill {
         panels: fill.panels
+        clockHours: fill.clockHours
+        cardKeys: fill.cardKeys
+        cardPicked: fill.cardPicked
         pixelRatio: fill.pixelRatio
         shift: fill.shift
       }
     }
   }
 
-  // A new interval restarts it, so every tick re-aims at the next minute,
+  // A new interval restarts it, so every tick re-aims at the next second
+  // (with clockSeconds) or minute,
   // or for the logo and the stats alone at their next move.
   Timer {
     running: clock.visible || logo.visible || fill.mode === "stats"
     repeat: true
-    interval: (clock.visible ? Model.untilNextMinute(fill.now) : Model.untilNextShift(fill.now)) + 50
+    interval: (fill.ticksSeconds ? Model.untilNextSecond(fill.now) : clock.visible ? Model.untilNextMinute(fill.now) : Model.untilNextShift(fill.now)) + 50
     onTriggered: fill.now = new Date()
     // Deferred: the clock's `visible` reads its layout, which reads `now`.
     onRunningChanged: if (running) Qt.callLater(function() { fill.now = new Date() })

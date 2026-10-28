@@ -4,7 +4,8 @@ import { load } from "./qmljs.js"
 // Stats.js and StatsViews.js are QML `.pragma library` scripts, loaded like
 // Model.js; the views import the data script as `Stats`.
 const Stats = load("Stats.js")
-const Views = load("StatsViews.js", { Stats })
+const Clock = load("Clock.js")
+const Views = load("StatsViews.js", { Stats, Clock })
 
 // Objects made inside the sandbox have its prototypes; copy them out so
 // strict deep equality compares only their contents.
@@ -87,7 +88,7 @@ card2	amdgpu	freq	2200000000
 ${extra}@end
 `
 
-const ALL_PANELS = ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system"]
+const ALL_PANELS = ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system", "clock"]
 
 const tests = {
   "parseFrame splits a frame into its sections"() {
@@ -835,13 +836,17 @@ let full = Stats.ingest(Stats.empty(), Stats.parseFrame(frame(10, [100, 0, 0, 90
 full = Stats.step(full, frame(11, [150, 0, 0, 950, 0, 0, 0, 0, 0, 0], "@procs\n1 (game) S 1 2 3 4 5 6 7 8 9 10 150 0 0 0\n@gpuapps\n1, /opt/game, 512\n"),
   "0, NVIDIA GeForce RTX 4080, 55, 7551, 16376, 54, 149.65, 320.00, 2790, 30, 0, 12",
   { identity: "Spotify", title: "Song", artist: "Band", album: "Record", art: "", playing: true, position: 10, length: 200 })
+// The Clock reads the sampler's clock rather than the samples (StatsFill).
+const clockState = Object.assign({}, full, { clockHours: 24, clock: {
+  now: new Date(2026, 9, 28, 14, 5, 30).getTime(), dateText: "", zones: [], offsets: {}, local: "Europe/Lisbon", reminders: [], location: null
+} })
 ALL_PANELS.forEach(panel => {
   tests["view of " + panel + " has a title, a box color and content"] = () => {
-    const view = Views.view(panel, full, palette)
+    const view = Views.view(panel, panel === "clock" ? clockState : full, palette)
     assert.ok(view.title && view.icon, panel)
     assert.match(view.color, /^#[0-9a-f]{6}$/)
     assert.equal(view.empty, "", panel + " should have data")
-    assert.ok(view.rows.length + view.lists.length + view.bars.length + view.graphs.length + (view.media ? 1 : 0) + (view.value ? 1 : 0) > 0, panel)
+    assert.ok(view.rows.length + view.lists.length + view.bars.length + view.graphs.length + (view.media ? 1 : 0) + (view.value ? 1 : 0) + (view.digits ? 1 : 0) > 0, panel)
     for (const row of view.rows) assert.ok(row.fraction === null || (row.fraction >= 0 && row.fraction <= 1), JSON.stringify(row))
     const empty = Views.view(panel, Stats.empty(), palette)
     assert.equal(empty.title, view.title)
@@ -1176,7 +1181,11 @@ Object.assign(tests, {
     const view = Views.view("battery", laptop, palette)
     assert.equal(view.value, "81%")
     assert.equal(view.caption, "3h 12m left")
-    assert.equal(view.info, "on battery")
+    // The emptiest peripheral takes the title's room, which a short card
+    // keeps when it drops the device rows.
+    assert.equal(view.info, "MX Keys 20%")
+    const bare = Object.assign({}, laptop, { power: [laptop.power[0]] })
+    assert.equal(Views.view("battery", bare, palette).info, "on battery")
     // A peripheral reporting only a level reads as about that full.
     assert.deepEqual(plain(view.rows.map(row => [row.label, row.text])), [["Power", "12.5 W"], ["Energy", "40.0 / 50.0 Wh"], ["MX Keys", "20%"]])
     // A low battery that is not charging asks for attention.
@@ -1454,6 +1463,32 @@ Object.assign(tests, {
     assert.ok(wide.rows.some(row => /°C/.test(row.text)))
     const narrow = Views.view("disks", full, palette, 6, false, 20)
     assert.ok(!narrow.rows.some(row => /°C/.test(row.text)))
+  },
+  "the clock view draws the time in digits over the date and the rest"() {
+    const view = Views.view("clock", clockState, palette, 6, false, 30)
+    assert.equal(view.digits, "14:05:30")
+    assert.equal(view.value, "")
+    assert.equal(view.valueColor, palette.boxes.clock)
+    assert.equal(view.info, "Lisbon")
+    assert.deepEqual(plain(view.rows.map(row => row.label)), ["Date", "Week"])
+    // A short card keeps the date, leaving the week; a narrow one the
+    // minutes alone.
+    assert.deepEqual(plain(Views.view("clock", clockState, palette, 4, false, 30).rows.map(row => row.label)), ["Date"])
+    assert.equal(Views.view("clock", clockState, palette, 6, false, 20).digits, "14:05")
+    // With other zones the info line gives way to their rows.
+    const zoned = Object.assign({}, clockState, { clock: Object.assign({}, clockState.clock, { zones: ["Asia/Tokyo"], offsets: { "Asia/Tokyo": 540 } }) })
+    const withZone = Views.view("clock", zoned, palette, 9, false, 30)
+    assert.equal(withZone.info, "")
+    assert.equal(withZone.rows[2].label, "Tokyo")
+    assert.equal(withZone.rows[2].tip, "Asia/Tokyo")
+    assert.equal(Views.view("clock", full, palette).empty, "Waiting for data")
+  },
+  "eleven panels with the Clock still fit the portrait strip"() {
+    // The owner's portable display: 648x1152 at 1.67, stats on 750 px.
+    const panels = ALL_PANELS.filter(panel => panel !== "igpu")
+    const portrait = Views.fit(panels, 648, 750)
+    assert.equal(portrait.cards.length, panels.length)
+    for (const card of portrait.cards) assert.ok(card.width >= Views.WIDE_SPAN * portrait.unit || card.width <= card.height * Views.WIDE_CARD, JSON.stringify(card))
   },
 })
 

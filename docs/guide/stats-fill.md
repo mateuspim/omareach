@@ -22,6 +22,7 @@ with history graphs and meters:
 | Sensors | The temperatures no other panel on the dashboard shows (the CPU and its dies, the GPUs, NVMe drives, memory modules), each against its own limit, led by the hottest for its limit, then the fans | hwmon, sysfs, `nvidia-smi` |
 | Battery | A laptop's battery with the time left, a bar of its level, its draw, energy, health and charge cycles; peripherals such as a wireless mouse or Bluetooth headphones, the emptiest leading when there is no laptop battery, each with its meter and a mark while it charges, and named by its kind ("Mouse", "Headset") unless two share one (hover for its model); without a battery it takes no card | `/sys/class/power_supply`, the shell's UPower devices |
 | Now playing | The track playing, with its cover and progress | the shell's MPRIS players |
+| Clock | The time in big blocky digits, the date, the week and day of the year, the next [reminder](#clock), other [time zones](#clock) and sunrise and sunset | the shell's clock, `zones.sh`, `omarchy-reminder show --json` |
 | System | Like fastfetch: Omarchy's icon beside the uptime, OS, Omarchy version and update channel, host, kernel, CPU, GPUs, memory, packages, shell, desktop, theme, load and threads | `/proc`, `/sys`, `/etc/os-release`, pacman's database |
 
 GPU, CPU, Memory and Network are on by default. Each card shows what fits
@@ -91,7 +92,9 @@ when the edge runs out of room, "not on this machine" for an iGPU panel
 without a second GPU or a Battery panel without a battery (which **Add**
 leaves out, and the count leaves out too). Click one under **Add** to
 show it last. Right-click Hide, or one under Add, to do the same on every
-monitor; right-clicking a shown panel only selects it. The page's **Every monitor** rows set the Animation,
+monitor; right-clicking a shown panel only selects it. While the Stats
+page shows, the panel's preview puts each card's number from the list
+on it, and fills in the selected one's. The page's **Every monitor** rows set the Animation,
 CPU power and Mesh addresses (below) for every dashboard. Without the Stats fill, the
 page offers to switch to it.
 
@@ -120,6 +123,37 @@ power management on, as on most laptops) and has shown no load for 5
 seconds rests: nvidia-smi stops, an AMD card is read every 10 seconds
 instead of every second, and the panel shows its last reading as idle
 until a reading finds it busy again.
+
+## Clock
+
+The Clock panel is off until you add it. It draws the time in the Clock
+fill's blocky digits, in 24- or 12-hour time as the monitor's **12-hour**
+button on the Fill page says, with seconds when the card is wide enough.
+Under it, in the order a short card drops them from the end:
+
+- **Date** ("Wed 28 Oct", in your locale) and **Week**, the ISO week and
+  the day of the year ("W44 · day 301").
+- The next **reminder** set with `omarchy reminder` (or the bar's
+  reminder button), counting down, with how many more follow; hover for
+  each one's time. It is read every 30 seconds.
+- Up to three other **time zones**, each with its time, the day when it
+  is not today here, and how far ahead or behind it is ("Tokyo 13:37 ·
+  +12h"). Without them, the card's corner names this machine's zone.
+- **Sun**: today's sunrise and sunset, or "No sunset today" in a polar
+  summer.
+
+Under **Clock · every monitor** on the Stats page (shown while this
+monitor's dashboard has the Clock), click **Add zone** to search tzdata's
+zones by city or region, and click a zone to take it off (or `x` on
+it). **Sun** works out the sun for the main city of this machine's time
+zone (Lisbon for `Europe/Lisbon`), close enough for sunrise; for exact
+coordinates use `omarchy-shell pym.omareach location 38.72,-9.14`. Both
+are worked out on this machine: nothing is looked up online, and the
+coordinates stay in your settings file.
+
+The time zones come from `zones.sh`, which asks bash's own clock for each
+zone's offset every 5 minutes (QML's JavaScript has no time zones), so a
+daylight saving change shows within 5 minutes.
 
 ## VPN and mesh
 
@@ -155,7 +189,7 @@ Whether one is on comes from the tunnels' interfaces (`proton0`, `nordlynx`, `wg
 on the wired or wireless card and steer around with policy rules. It
 only watches: connecting and disconnecting stay with each client.
 
-The Stats page's **Mesh addresses** switch, off by default since the
+The Stats page's **Mesh** (mesh addresses) switch, off by default since the
 dashboard is on screen for anyone in the room, shows a mesh's IPv4
 address (Tailscale's `100.x`) on its row, ahead of the peers online.
 It asks `ip` for the addresses every 10 seconds while a tunnel is up, and
@@ -218,6 +252,6 @@ firmware and stall the CPU for a moment, are read every 5 seconds.
 
 The graphs scroll and the meters ease between samples at 30 frames a
 second by default, and the dashboard redraws only as often. The
-Animation list on the Stats page (or `pace`) sets it for every monitor:
+Animation buttons on the Stats page (or `pace`) set it for every monitor:
 the display's own rate for the smoothest motion, 60, 30 or 15 fps, or no
 animation, which redraws once a second.

@@ -27,10 +27,11 @@ logo, a clock or a live btop-style system dashboard.
   [The panel](docs/guide/panel.md)
 - **Fills:** black (safe on OLED), the theme color, the wallpaper slice
   (plain or dimmed), the Omarchy logo, a big blocky clock (24- or
-  12-hour, with the date where it fits), or a live
-  **stats dashboard** with 11 panels in the order you choose: GPU, CPU,
+  12-hour, with the date where it fits and seconds against burn-in), or a live
+  **stats dashboard** with 12 panels in the order you choose: GPU, CPU,
   memory, network (with the VPN you're on and where it comes out, and
-  Tailscale's peers), disks, sensors, battery, now playing and more, with
+  Tailscale's peers), disks, sensors, battery, now playing, a clock with
+  other time zones, reminders and the sun, and more, with
   meters against each part's own limit and a warning color you can see
   from across the room.
   [Fills](docs/guide/fills.md) · [The stats fill](docs/guide/stats-fill.md)

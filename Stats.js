@@ -1230,7 +1230,7 @@ function palette(colors, fallback) {
     // so a warning never looks like a card's normal color.
     caution: yellow,
     alert: red,
-    boxes: { gpu: cyan, igpu: mix(cyan, green, 0.5), temps: mix(yellow, red, 0.5), battery: green, media: mix(magenta, blue, 0.5), system: accent, cpu: magenta, memory: green, network: mix(cyan, blue, 0.5), disks: mix(yellow, green, 0.35), processes: blue },
+    boxes: { gpu: cyan, igpu: mix(cyan, green, 0.5), temps: mix(yellow, red, 0.5), battery: green, media: mix(magenta, blue, 0.5), system: accent, cpu: magenta, memory: green, network: mix(cyan, blue, 0.5), disks: mix(yellow, green, 0.35), processes: blue, clock: yellow },
     // Headlines and graphs run through their box's hues, cool to hot, as
     // in btop. Every meter that measures how close something is to its
     // limit (heat, power, VRAM, swap, load, stalls, fans, battery) uses

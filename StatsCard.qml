@@ -5,6 +5,7 @@ import qs.Commons
 import "." as Reserve
 import "Stats.js" as Stats
 import "StatsViews.js" as Views
+import "Model.js" as Model
 
 // One panel of the stats dashboard, drawn the way btop draws its boxes: a
 // thin rounded outline in the panel's color with the title cut into its
@@ -24,6 +25,11 @@ Item {
   // Not `palette`: that would hide Item.palette.
   property var theme: Stats.palette({}, {})
   required property int unit
+  // The panel preview's key to the Stats page: the card's number in that
+  // page's list over the card (0 for none), filled in when it is the one
+  // selected there.
+  property int badge: 0
+  property bool picked: false
   property string fontFamily: Style.font.family
   readonly property bool wide: width > height * Views.WIDE_CARD
   // Omarchy's icon beside a view that asks for it (System), as fastfetch
@@ -172,12 +178,48 @@ Item {
     // rows follow right under the value.
     ColumnLayout {
       Layout.fillWidth: true
-      Layout.fillHeight: card.wide || card.shown.graphs.length > 0
+      Layout.fillHeight: card.wide || card.shown.graphs.length > 0 || card.shown.digits !== ""
       Layout.alignment: Qt.AlignTop
       // Side by side the rows' text needs more of the width than the graph.
       Layout.preferredWidth: 2
       spacing: Math.round(card.unit * 0.4)
-      visible: card.shown.value !== "" || card.shown.graphs.length > 0 || card.shown.bars.length > 0 || card.shown.stack.length > 0
+      visible: card.shown.digits !== "" || card.shown.value !== "" || card.shown.graphs.length > 0 || card.shown.bars.length > 0 || card.shown.stack.length > 0
+
+      // The Clock's time in the Clock fill's blocky digits, as big as the
+      // room the rows leave: painted, since a block per cell would be a
+      // hundred items redone every second.
+      Canvas {
+        id: digits
+        visible: card.shown.digits !== ""
+        Layout.fillWidth: true
+        Layout.fillHeight: true
+        Layout.minimumHeight: Math.round(card.unit * Views.DIGIT_ROWS)
+        readonly property var bitmap: Model.clockBitmap(card.shown.digits)
+        readonly property color tint: card.shown.valueColor
+        onBitmapChanged: requestPaint()
+        onTintChanged: requestPaint()
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
+        onPaint: {
+          var ctx = getContext("2d")
+          ctx.reset()
+          if (!visible || !bitmap.columns) return
+          var cell = Math.min(width / bitmap.columns, height / bitmap.rows)
+          if (cell >= 2) cell = Math.floor(cell)
+          // Left-aligned like every other card's headline, centered in
+          // height on a stacked card, where the rows sit below.
+          var top = card.wide ? 0 : Math.floor((height - cell * bitmap.rows) / 2)
+          ctx.fillStyle = tint
+          // A block reaches a pixel into a lit neighbour: at a fractional
+          // scale (1.67) blocks that only touch leave hairline seams.
+          var lit = {}
+          for (var i = 0; i < bitmap.cells.length; i++) lit[bitmap.cells[i].x + "," + bitmap.cells[i].y] = true
+          for (var j = 0; j < bitmap.cells.length; j++) {
+            var c = bitmap.cells[j]
+            ctx.fillRect(c.x * cell, top + c.y * cell, cell + (lit[(c.x + 1) + "," + c.y] ? 1 : 0), cell + (lit[c.x + "," + (c.y + 1)] ? 1 : 0))
+          }
+        }
+      }
 
       RowLayout {
         visible: card.shown.value !== ""
@@ -330,7 +372,7 @@ Item {
       }
       // Beside the rows of a wide card, a headline without a graph keeps to
       // the top like every other card's, rather than floating in the middle.
-      Item { Layout.fillHeight: true; visible: card.wide && card.shown.graphs.length === 0 }
+      Item { Layout.fillHeight: true; visible: card.wide && card.shown.graphs.length === 0 && card.shown.digits === "" }
     }
 
     // The details: label, meter and value rows, then ranked lists. No
@@ -640,4 +682,29 @@ Item {
     HoverHandler { id: rowHover }
     LazyTip { shown: rowHover.hovered; text: statRow.tip || (rowLabel.truncated ? statRow.label : "") }
   }
+
+  // Drawn at the strip's size and scaled down with it, so it is as big as
+  // the card allows: the preview is a few dozen pixels high.
+  Rectangle {
+    visible: card.badge > 0
+    readonly property real size: Math.min(card.width, card.height) * 0.55
+    anchors.centerIn: parent
+    width: size
+    height: size
+    radius: size / 2
+    color: card.picked ? card.shown.color : "black"
+    opacity: 0.9
+    border.color: card.shown.color
+    border.width: Math.max(1, size / 14)
+    Text {
+      textFormat: Text.PlainText
+      anchors.centerIn: parent
+      text: String(card.badge)
+      color: card.picked ? "black" : card.shown.color
+      font.family: card.fontFamily
+      font.pixelSize: Math.round(parent.size * 0.6)
+      font.bold: true
+    }
+  }
 }
+

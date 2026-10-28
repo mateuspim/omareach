@@ -28,7 +28,7 @@ so every page works without a mouse; on Edges they move the edges.
 
 <p align="center">
   <img src="../panel-pages.png"
-       alt="The panel's four pages side by side: Edges with the edge sliders and aspect presets; Fill with the seven fills, Stats selected, where the stats go and Same on every monitor; Stats with GPU, CPU, Memory and Network shown two to a row with Earlier, Later and Hide for the selected one, the panels to add, and the Animation list and CPU power button; Profiles with the Desk profile, the name field, Auto and Save">
+       alt="The panel's four pages side by side: Edges with the edge sliders and aspect presets; Fill with the seven fills, Stats selected, where the stats go and Same on every monitor; Stats with GPU, CPU, Memory and Network shown two to a row with Earlier, Later and Hide for the selected one, the panels to add, and the Animation, CPU power and Mesh buttons; Profiles with the Desk profile, the name field, Auto and Save">
 </p>
 
 - **Preview**: the monitor drawn to scale, with the black edges, the
@@ -55,7 +55,10 @@ so every page works without a mouse; on Edges they move the edges.
 - **Footer**: under every page, **Idle** (black when idle, see
   [Fills](fills.md)), **Ruler** (above) and **Clear**, which removes every
   reserved edge on the monitor. Right after a Clear, a zeroed edge, a
-  preset or a profile change, Clear turns into **Undo**.
+  preset, a profile change or a hidden stats panel, Clear turns into
+  **Undo**. After a key that acts away from the cursor (`f`, `i`, `p`,
+  `0`, `u`, `x`, a profile's number), the footer says what it did for
+  3 seconds, with "U to undo" when it can be undone.
 
 The **Fill** page and the **Idle** button are described in
 [Fills](fills.md), the **Stats** page in [The stats fill](stats-fill.md),
@@ -72,9 +75,9 @@ next to the edges, since a ruler on the screen measures something else.
 | `0` | Zero the selected edge; from another page it brings up Edges first |
 | Backspace, Delete | Edges: zero the selected edge. Other pages: as `x` |
 | Enter | Press the button under the cursor (Shift+Enter: right-click it, as in "every monitor") |
-| `x` | Stats: hide the selected panel. Profiles: delete the profile under the cursor (`u` undoes it) |
+| `x` | Stats: hide the selected panel, or take a time zone off the Clock. Profiles: delete the profile under the cursor (`u` undoes both) |
 | Shift+`j` / `k` | Stats: move the selected panel later or earlier |
-| `u`, Ctrl+Z | Undo a Clear, a zeroed edge, a preset or a profile change |
+| `u`, Ctrl+Z | Undo a Clear, a zeroed edge, a preset, a profile change or a hidden panel |
 | Space, `p` | Pause or resume the monitor |
 | `f` | Next fill |
 | `c` | Clock or stats on the largest edge / top or bottom |

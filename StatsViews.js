@@ -1,5 +1,6 @@
 .pragma library
 .import "Stats.js" as Stats
+.import "Clock.js" as Clock
 
 // The stats fill's drawing, without any QML: how the panels tile a strip
 // and what each panel shows, from the state and palette Stats.js makes.
@@ -93,9 +94,9 @@ function layout(panels, width, height, unit) {
 
 var ICONS = {
   gpu: "\u{f08ae}", igpu: "\u{f08ae}", temps: "\u{f050f}", battery: "\u{f0079}", media: "\u{f075a}", system: "\u{f02fd}", cpu: "\u{f061a}", memory: "\u{f035b}", network: "\u{f0200}",
-  disks: "\u{f02ca}", processes: "\u{f0279}"
+  disks: "\u{f02ca}", processes: "\u{f0279}", clock: "\u{f0954}"
 }
-var TITLES = { gpu: "GPU", igpu: "iGPU", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes" }
+var TITLES = { gpu: "GPU", igpu: "iGPU", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes", clock: "Clock" }
 
 function row(label, text, fraction, color) {
   return { label: label, text: text, fraction: fraction === null || fraction === undefined ? null : Math.max(0, Math.min(1, fraction)), color: color || "", swatch: false, tip: "" }
@@ -245,7 +246,7 @@ function view(panel, state, palette, room, wide, span, shown) {
   var result = {
     title: TITLES[panel] || panel, icon: ICONS[panel] || "", color: palette.boxes[panel] || palette.accent,
     info: "", value: "", valueColor: palette.foreground, caption: "", captionTip: "", note: "", noteTip: "",
-    graphs: [], bars: [], stack: [], rows: [], lists: [], empty: "", logo: false, alert: 0
+    graphs: [], bars: [], stack: [], rows: [], lists: [], digits: "", empty: "", logo: false, alert: 0
   }
   var build = VIEWS[panel]
   if (build) build(result, state, palette, g, room, wide, span, shown || [])
@@ -279,6 +280,9 @@ var BARS_ROWS = 1.4
 var STACK_ROWS = 0.8
 var NOTE_ROWS = 0.8
 var GAP_ROWS = 0.3
+// The Clock's blocky digits at their smallest: they take whatever room
+// the rows leave, like a graph, but stay big enough to read.
+var DIGIT_ROWS = 2.5
 
 // How many of a view's rows fit `room` rows: all of it beside the headline
 // in a wide card, what the headline leaves in a stacked one. Rows that would be cut in half are left
@@ -292,7 +296,7 @@ function rowsThatFit(v, room, wide) {
 
 // Rows' room a view's headline takes, without the gap below it.
 function headlineRows(v) {
-  return (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
+  return (v.digits ? DIGIT_ROWS : 0) + (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
 }
 
 // A wide card's headline has the card's `room` rows beside the rows, and
@@ -657,6 +661,10 @@ var VIEWS = {
       else if (charging(laptop) && laptop.power > 0 && laptop.full !== null) v.caption = hours((laptop.full - laptop.energy) / laptop.power) + " to full"
       else v.caption = String(laptop.status || "").toLowerCase()
       v.info = charging(laptop) ? "charging" : laptop.status === "Discharging" ? "on battery" : ""
+      // The emptiest peripheral, in the title's room: a short card drops
+      // the device rows, and a dying mouse should still show.
+      var emptiest = known.slice().sort(function(a, b) { return percent(a) - percent(b) })[0]
+      if (emptiest) v.info = label(emptiest) + " " + Stats.formatPercent(percent(emptiest))
       if (laptop.power !== null) v.rows.push(row("Power", laptop.power.toFixed(1) + " W", null))
       if (laptop.energy !== null && laptop.full) v.rows.push(row("Energy", laptop.energy.toFixed(1) + " / " + laptop.full.toFixed(1) + " Wh", null))
       // Health against what it held new: low health is what wears out.
@@ -711,6 +719,25 @@ var VIEWS = {
       // Without a length, a position (a browser's 0:00) tells nothing.
       time: m.length > 0 ? Stats.formatDuration(m.position) + " / " + Stats.formatDuration(m.length) : ""
     }
+  },
+
+  // The time in the Clock fill's blocky digits, then the date, the week,
+  // the next reminder, other zones and the sun, the last dropped first.
+  // `state` is the sampler's clockData and the monitor's clockHours
+  // (StatsFill), not the samples.
+  clock: function(v, state, palette, g, room, wide, span) {
+    var clock = state.clock
+    if (!clock) { v.empty = "Waiting for data"; return }
+    var facts = Clock.clockFacts(clock, state.clockHours, span || 0, wide)
+    v.digits = facts.digits
+    v.valueColor = palette.boxes.clock
+    facts.rows.forEach(function(fact) {
+      var r = row(fact.label, fact.text, null)
+      if (fact.tip) r.tip = fact.tip
+      v.rows.push(r)
+    })
+    // The zone, unless the zones' rows already say how far they are.
+    v.info = clock.zones && clock.zones.length ? "" : Clock.zoneCity(clock.local || "")
   },
 
   system: function(v, state, palette, g, room, wide, span, shown) {
