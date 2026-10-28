@@ -209,9 +209,10 @@ Item {
           if (!visible || !bitmap.columns) return
           var cell = Math.min(width / bitmap.columns, height / bitmap.rows)
           if (cell >= 2) cell = Math.floor(cell)
-          // Left-aligned like every other card's headline, centered in
-          // height on a stacked card, where the rows sit below.
-          var top = card.wide ? 0 : Math.floor((height - cell * bitmap.rows) / 2)
+          // Centered in their room, across and down: a clock reads as the
+          // card's subject, not a number at the start of a line.
+          var left = Math.floor((width - cell * bitmap.columns) / 2)
+          var top = Math.floor((height - cell * bitmap.rows) / 2)
           ctx.fillStyle = tint
           // Each row's run of lit blocks as one rectangle, reaching a pixel
           // into a lit row below: at a fractional scale (1.67) blocks that
@@ -224,7 +225,7 @@ Item {
               var end = x
               var below = false
               while (lit[end + "," + y]) { if (lit[end + "," + (y + 1)]) below = true; end++ }
-              ctx.fillRect(x * cell, top + y * cell, (end - x) * cell, cell + (below ? 1 : 0))
+              ctx.fillRect(left + x * cell, top + y * cell, (end - x) * cell, cell + (below ? 1 : 0))
               x = end
             }
           }
