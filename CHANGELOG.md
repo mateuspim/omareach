@@ -36,6 +36,13 @@
   IVPN and Windscribe clients, so the clients only checked against their
   docs are covered end to end.
 
+### Fixed
+
+- **Rows after a swatch** (the Network card's VPN and mesh rows) ran
+  their label into the value on a narrow card ("VPNProton VPN").
+- **The load average** on a half-width wide CPU card was cut to
+  "Lo… 3.54 6.60 10.…"; it takes one space between its numbers there.
+
 ### Changed
 
 - **Animation is a row of buttons** on the Stats page (Display, 60, 30,

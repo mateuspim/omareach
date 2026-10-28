@@ -646,7 +646,7 @@ Item {
       width: statRow.labelFills ? parent.width - value.width - meter.width - card.unit * 1.2
         : statRow.columns ? card.labelColumn
         : Math.max(0, Math.min(Math.max(statRow.labelWidth, Math.min(implicitWidth + card.unit * 0.6, parent.width * 0.5)),
-            parent.width - value.width - card.unit * 0.6))
+            parent.width - x - value.width - card.unit * 0.6))
       text: statRow.label
       elide: Text.ElideRight
       color: card.theme.subtle
@@ -679,8 +679,10 @@ Item {
       // Never over the label: it takes the room the label can spare (all
       // but a short label's own width), and past that it elides. A row
       // with a meter takes the card's value column, right-aligned in it.
+      // The label starts after a swatch (rowLabel.x): leaving it out ran
+      // the Network card's "VPN" into its value.
       width: statRow.columns ? card.valueColumn
-        : Math.min(implicitWidth, parent.width - Math.min(rowLabel.implicitWidth, card.unit * 3) - card.unit * 0.6)
+        : Math.min(implicitWidth, parent.width - rowLabel.x - Math.min(rowLabel.implicitWidth, card.unit * 3) - card.unit * 0.6)
       horizontalAlignment: Text.AlignRight
       elide: Text.ElideRight
       text: statRow.text

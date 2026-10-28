@@ -1501,6 +1501,13 @@ Object.assign(tests, {
     assert.equal(portrait.cards.length, panels.length)
     for (const card of portrait.cards) assert.ok(card.width >= Views.WIDE_SPAN * portrait.unit || card.width <= card.height * Views.WIDE_CARD, JSON.stringify(card))
   },
+  "a narrow row of load averages keeps one space between them"() {
+    const g = palette.gradients
+    assert.equal(Views.loadRow([3.54, 6.6, 10.12], 24, g, 22).text, "1m 3.54  5m 6.60  15m 10.12")
+    assert.equal(Views.loadRow([3.54, 6.6, 10.12], 24, g, 16).text, "3.54  6.60  10.12")
+    // A half-width wide card on the portrait strip: 13 units of rows.
+    assert.equal(Views.loadRow([3.54, 6.6, 10.12], 24, g, 13).text, "3.54 6.60 10.12")
+  },
 })
 
 let failed = 0

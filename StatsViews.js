@@ -193,8 +193,11 @@ function stallRow(value, g) {
   return row("Stalled", value.toFixed(1) + "%", level, Stats.gradientAt(g.level, level))
 }
 
-// Units of width from which the load average names its minutes.
+// Units of width from which the load average names its minutes, and
+// under which its numbers take one space between them: two cut a
+// half-width wide card's row to "Lo…  3.54  6.60  10.…".
 var LOAD_LABEL_SPAN = 22
+var LOAD_COMPACT_SPAN = 16
 // Units of width under which the CPU's clock leaves the headline's
 // caption ("load · 5.30 GHz") for a row of its own.
 var CLOCK_CAPTION_SPAN = 24
@@ -211,7 +214,7 @@ function loadRow(loadavg, threads, g, span) {
   var numbers = loadavg.map(function(n) { return n.toFixed(2) })
   var text = span >= LOAD_LABEL_SPAN
     ? ["1m", "5m", "15m"].map(function(name, i) { return name + " " + numbers[i] }).join("  ")
-    : numbers.join("  ")
+    : numbers.join(span < LOAD_COMPACT_SPAN ? " " : "  ")
   var level = threads > 0 ? loadavg[0] / threads : null
   return row("Load", text, level, level === null ? "" : Stats.gradientAt(g.level, level))
 }
