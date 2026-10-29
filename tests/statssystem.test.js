@@ -40,6 +40,20 @@ const tests = {
     assert.equal(supplies[1].full, 48)
     assert.deepEqual(plain(supplies[2]), { id: "hidpp_battery_0", name: "MX Keys", kind: "", device: true, status: "", capacity: null, level: "Low", power: null, energy: null, full: null, health: null, cycles: null })
   },
+  "parsePower lists a mouse once when its receiver and cable both report it"() {
+    const supplies = Sys.parsePower([
+      "hidpp_battery_0\ttype\tBattery", "hidpp_battery_0\tscope\tDevice", "hidpp_battery_0\tstatus\tUnknown", "hidpp_battery_0\tcapacity\t21", "hidpp_battery_0\tmodel_name\tG502 X",
+      "hidpp_battery_2\ttype\tBattery", "hidpp_battery_2\tscope\tDevice", "hidpp_battery_2\tstatus\tCharging", "hidpp_battery_2\tcapacity\t71", "hidpp_battery_2\tmodel_name\tG502 X"
+    ])
+    assert.deepEqual(plain(supplies.map(b => [b.id, b.capacity])), [["hidpp_battery_2", 71]])
+  },
+  "parsePower leaves a laptop's batteries and different peripherals alone"() {
+    const supplies = Sys.parsePower([
+      "BAT0\ttype\tBattery", "BAT0\tcapacity\t50", "BAT0\tmodel_name\tX", "BAT1\ttype\tBattery", "BAT1\tcapacity\t60", "BAT1\tmodel_name\tX",
+      "a\ttype\tBattery", "a\tscope\tDevice", "a\tmodel_name\tMouse", "b\ttype\tBattery", "b\tscope\tDevice", "b\tmodel_name\tPad"
+    ])
+    assert.equal(supplies.length, 4)
+  },
   "parsePower reads a battery's health and cycles"() {
     const [energy, charge, uncounted] = Sys.parsePower([
       "BAT0\ttype\tBattery", "BAT0\tenergy_full\t45000000", "BAT0\tenergy_full_design\t50000000", "BAT0\tcycle_count\t312",

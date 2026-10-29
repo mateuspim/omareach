@@ -159,7 +159,22 @@ function parsePower(lines) {
       cycles: cycles > 0 ? cycles : null
     })
   }
-  return result
+  return sameDevice(result)
+}
+
+// A peripheral that reaches the machine twice, a Logitech mouse through its
+// receiver and over its charging cable (hidpp_battery_0 and _2), lists a
+// battery for each, and the receiver's keeps an old charge: 21% beside the
+// cable's 71%. Of batteries sharing a name, the one that knows its state
+// (the cable's, charging) stands for the device; the laptop's never merge.
+function sameDevice(batteries) {
+  function known(b) { return b.status !== "" && b.status !== "Unknown" }
+  return batteries.filter(function(b, i) {
+    if (!b.device) return true
+    return !batteries.some(function(o, j) {
+      return j !== i && o.device && o.name === b.name && (known(o) && !known(b) || known(o) === known(b) && j < i)
+    })
+  })
 }
 
 // Peripherals' batteries from UPower's devices ({ nativePath, model, type,
