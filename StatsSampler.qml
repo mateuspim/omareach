@@ -8,6 +8,7 @@ import qs.Commons as Commons
 import "Model.js" as Model
 import "ModelArt.js" as Art
 import "Stats.js" as Stats
+import "Clock.js" as Clock
 import "StatsFormat.js" as Format
 import "StatsGpu.js" as Gpu
 import "StatsNet.js" as Net
@@ -30,6 +31,12 @@ QtObject {
   // Whether a panel shows batteries, which adds UPower's peripherals.
   property bool batteries: false
   property var data: Stats.empty()
+  // Whether a panel shows the Clock, which ticks every second and reads
+  // the other `zones` and Omarchy's reminders; `location` is where the
+  // sun is worked out, or null.
+  property bool clock: false
+  property var zones: []
+  property var location: null
 
   // The clock the graphs and meters move by (StatsGraph, StatsEase), in
   // milliseconds: it ticks `pace` times a second (Model.statsPace), or on
@@ -214,6 +221,70 @@ QtObject {
       position: player.positionSupported ? player.position : null,
       length: player.lengthSupported ? player.length : null
     }
+  }
+
+  // The Clock card's data (Clock.clockFacts), apart from `data`: it moves
+  // on the second, the samples whenever stats.sh prints, and only the
+  // Clock card reads it. `now` ticks on the second, a little after, so a
+  // tick never lands just before the second it should show.
+  readonly property bool clockRunning: running && clock
+  property real clockNow: Date.now()
+  readonly property var clockData: ({
+    now: clockNow, dateText: Qt.formatDate(new Date(clockNow), "ddd d MMM"),
+    zones: zones, offsets: zoneOffsets.offsets, local: zoneOffsets.local, reminders: reminders, location: location
+  })
+  property Timer clockTimer: Timer {
+    running: root.clockRunning
+    repeat: true
+    interval: 1000 - root.clockNow % 1000 + 20
+    onTriggered: root.clockNow = Date.now()
+    onRunningChanged: if (running) root.clockNow = Date.now()
+  }
+
+  // The zones' UTC offsets and this machine's zone (zones.sh): QML's
+  // JavaScript has no time zones of its own. Read again every 5 minutes,
+  // for a daylight saving change, and as soon as the zones change. The
+  // panel reads `localZone` for its sunrise button, so it runs without
+  // other zones too.
+  readonly property string zonesScript: decodeURIComponent(String(Qt.resolvedUrl("zones.sh")).replace(/^file:\/\//, ""))
+  property var zoneOffsets: ({ local: "", offsets: {} })
+  readonly property string localZone: zoneOffsets.local
+  onZonesChanged: if (clockRunning) Qt.callLater(askZones)
+  function askZones() {
+    if (zonesProcess.running) return
+    zonesProcess.command = ["bash", zonesScript].concat(zones)
+    zonesProcess.running = true
+  }
+  property Process zonesProcess: Process {
+    stdout: StdioCollector {
+      onStreamFinished: root.zoneOffsets = Clock.parseZoneOffsets(text)
+    }
+  }
+  property Timer zonesTimer: Timer {
+    interval: 300000
+    repeat: true
+    triggeredOnStart: true
+    running: root.clockRunning
+    onTriggered: root.askZones()
+  }
+
+  // Omarchy's reminders, as its bar indicator reads them: every 30 s, and
+  // the countdown runs on the clock in between. Without omarchy-reminder,
+  // or when it fails, there are none.
+  property var reminders: []
+  property Process remindersProcess: Process {
+    command: ["omarchy-reminder", "show", "--json"]
+    stdout: StdioCollector {
+      onStreamFinished: root.reminders = Clock.parseReminders(text)
+    }
+    onExited: function(code) { if (code !== 0) root.reminders = [] }
+  }
+  property Timer remindersTimer: Timer {
+    interval: 30000
+    repeat: true
+    triggeredOnStart: true
+    running: root.clockRunning
+    onTriggered: if (!root.remindersProcess.running) root.remindersProcess.running = true
   }
 
   property Timer restartTimer: Timer {

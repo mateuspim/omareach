@@ -29,16 +29,25 @@ This is what it does with that access:
   Proton app's cache and runs the status command of the clients whose
   tunnels are up, read-only: `tailscale status --json`, `nordvpn status`,
   `mullvad status`, `piactl get`, `ivpn status`, `windscribe-cli status`,
-  `expressvpnctl get` or `expressvpn status`. CPU power
+  `expressvpnctl get` or `expressvpn status`; and, only while a Clock
+  panel shows, `zones.sh` every 5 minutes (bash builtins, and `readlink
+  /etc/localtime` for this machine's zone) and `omarchy-reminder show
+  --json` every 30 s, which only lists reminders. CPU power
   opens `omarchy-launch-floating-terminal-with-presentation` (below). The commands
-  and their arguments are fixed; none is built from settings or IPC input.
+  and their arguments are fixed, but for `zones.sh`'s: the Clock panel's
+  time zone names from settings or IPC, passed as arguments (never
+  through a shell), accepted only in tzdata's shape (no `..`, no leading
+  `/`) by `Clock.zoneName` and again by `zones.sh`, which also skips a
+  name that is not a file under `/usr/share/zoneinfo`.
 - **Reads:** `/proc` and `/sys` counters for the stats fill (sensors of a
   device the kernel put to sleep are skipped, since reading wakes it),
   including which VPN or mesh tunnels are up (`/sys/class/net`,
   `/proc/net/if_inet6`), the Proton VPN app's
   `~/.cache/Proton/VPN/connection/connection_persistence.json` and
   `serverlist.json` for its server and city,
-  pacman's database and `/etc/os-release` for the System panel, libdrm's
+  pacman's database and `/etc/os-release` for the System panel,
+  `/usr/share/zoneinfo/zone1970.tab` for the Stats page's time zone list
+  and the coordinates of this machine's zone, libdrm's
   `amdgpu.ids` and hwdata's `pci.ids` for GPU names, the
   wallpaper through `~/.local/state/omarchy/current/background`, the
   theme's `colors.toml`, Omarchy's `logo.svg` and `icon.txt`, and the

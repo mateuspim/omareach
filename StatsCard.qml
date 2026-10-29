@@ -27,8 +27,15 @@ Item {
   // Not `palette`: that would hide Item.palette.
   property var theme: Format.palette({}, {})
   required property int unit
+  // The panel preview's key to the Stats page: the card's number in that
+  // page's list over the card (0 for none), filled in when it is the one
+  // selected there.
+  property int badge: 0
+  property bool picked: false
   property string fontFamily: Style.font.family
-  readonly property bool wide: width > height * Tiles.WIDE_CARD
+  // The panel it draws, for the Clock's rule of when to go wide.
+  property string panel: ""
+  readonly property bool wide: Tiles.wideCard(panel, width, height, unit)
   // Omarchy's icon beside a view that asks for it (System), as fastfetch
   // shows the distro's: as tall as the body, when that leaves the rows
   // room enough (a label and a short value, about 13 units).
@@ -175,12 +182,19 @@ Item {
     // rows follow right under the value.
     ColumnLayout {
       Layout.fillWidth: true
-      Layout.fillHeight: card.wide || card.shown.graphs.length > 0
+      Layout.fillHeight: card.wide || card.shown.graphs.length > 0 || card.shown.digits !== ""
       Layout.alignment: Qt.AlignTop
       // Side by side the rows' text needs more of the width than the graph.
-      Layout.preferredWidth: 2
+      // The Clock's digits take what its short rows leave.
+      Layout.preferredWidth: card.shown.digits !== "" ? 5 : 2
       spacing: Math.round(card.unit * 0.4)
-      visible: card.shown.value !== "" || card.shown.graphs.length > 0 || card.shown.bars.length > 0 || card.shown.stack.length > 0
+      visible: card.shown.digits !== "" || card.shown.value !== "" || card.shown.graphs.length > 0 || card.shown.bars.length > 0 || card.shown.stack.length > 0
+
+      Reserve.StatsDigits {
+        digits: card.shown.digits
+        tint: card.shown.valueColor
+        unit: card.unit
+      }
 
       RowLayout {
         visible: card.shown.value !== ""
@@ -333,7 +347,7 @@ Item {
       }
       // Beside the rows of a wide card, a headline without a graph keeps to
       // the top like every other card's, rather than floating in the middle.
-      Item { Layout.fillHeight: true; visible: card.wide && card.shown.graphs.length === 0 }
+      Item { Layout.fillHeight: true; visible: card.wide && card.shown.graphs.length === 0 && card.shown.digits === "" }
     }
 
     // The details: label, meter and value rows, then ranked lists. No
@@ -345,7 +359,7 @@ Item {
       Layout.fillWidth: true
       Layout.fillHeight: card.wide
       Layout.preferredWidth: 3
-      Layout.maximumWidth: card.unit * 32
+      Layout.maximumWidth: card.unit * (card.shown.digits !== "" ? 24 : 32)
       Layout.alignment: Qt.AlignTop
       spacing: Math.round(card.unit * 0.35)
       visible: card.shown.rows.length > 0 || card.shown.lists.length > 0
@@ -425,4 +439,29 @@ Item {
     font.family: card.fontFamily
     font.pixelSize: card.unit
   }
+
+  // Drawn at the strip's size and scaled down with it, so it is as big as
+  // the card allows: the preview is a few dozen pixels high.
+  Rectangle {
+    visible: card.badge > 0
+    readonly property real size: Math.min(card.width, card.height) * 0.55
+    anchors.centerIn: parent
+    width: size
+    height: size
+    radius: size / 2
+    color: card.picked ? card.shown.color : "black"
+    opacity: 0.9
+    border.color: card.shown.color
+    border.width: Math.max(1, size / 14)
+    Text {
+      textFormat: Text.PlainText
+      anchors.centerIn: parent
+      text: String(card.badge)
+      color: card.picked ? "black" : card.shown.color
+      font.family: card.fontFamily
+      font.pixelSize: Math.round(parent.size * 0.6)
+      font.bold: true
+    }
+  }
 }
+

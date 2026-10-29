@@ -2,12 +2,56 @@
 
 ## Unreleased
 
+### Added
+
+- **Clock panel** on the stats dashboard, opt-in: the time in the Clock
+  fill's blocky digits (with seconds on a wide card), the date, the ISO
+  week and day of the year, the next Omarchy reminder counting down, up
+  to three other time zones ("Tokyo 13:37 · +12h", with the day when it
+  is not today here), sunrise and sunset, and meters for how much of the
+  day and the year has gone. A short card drops them from the end; a
+  card less than very wide stacks its digits over its rows, so they keep
+  their size. It follows the monitor's 12-hour setting, which the Fill
+  page now offers for a dashboard with the Clock panel too.
+- **Time zones and the sun** for the Clock panel, on the Stats page and
+  over IPC (`zones`, `location`): zones are picked from tzdata's list,
+  and **Sun** works out sunrise and sunset for the city of this
+  machine's time zone (or exact coordinates over IPC). Nothing is looked
+  up online; the offsets come from the new `zones.sh`, which uses bash's
+  own clock, since QML's JavaScript has no time zones.
+- **Seconds on the Clock fill** (`clockSeconds`), against burn-in: a
+  blinking colon, or a bar under the time that fills over the minute.
+- **Toast:** a key that acts away from the cursor (`f`, `i`, `p`, a
+  profile, `x`, `0`, `u`) says what it did in the panel's footer for 3
+  seconds, with "U to undo" when it can be undone.
+- **Hiding a stats panel can be undone**, like a clear or a deleted
+  profile.
+- **The preview numbers its cards** on the Stats page, as the list does,
+  and fills in the selected one's number: the key from a card to its
+  entry.
+- **The Battery card's info** names the emptiest peripheral ("Mouse
+  12%") beside a laptop's battery, so a dying mouse shows even on a card
+  too short for the device rows.
+- **Tests for vpn.sh** against fake NordVPN, Mullvad, PIA, ExpressVPN,
+  IVPN and Windscribe clients, so the clients only checked against their
+  docs are covered end to end.
+
 ### Fixed
 
 - **One battery per peripheral:** a Logitech mouse that the kernel lists
   twice, through its receiver and over its charging cable, showed on the
   Battery card twice, once with a stale charge (21% beside 71%). The
   entry that knows its state now stands for the device.
+- **Rows after a swatch** (the Network card's VPN and mesh rows) ran
+  their label into the value on a narrow card ("VPNProton VPN").
+- **The load average** on a half-width wide CPU card was cut to
+  "Lo… 3.54 6.60 10.…"; it takes one space between its numbers there.
+
+### Changed
+
+- **Animation is a row of buttons** on the Stats page (Display, 60, 30,
+  15, Off): the list ran past the panel's bottom. CPU power and Mesh
+  addresses (now labeled **Mesh**) share the row under it.
 
 ## 1.11.0 — 2026-10-26
 

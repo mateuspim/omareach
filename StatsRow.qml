@@ -20,6 +20,10 @@ Item {
   // Shown on hover over the row, as is a label cut short.
   property string tip: ""
   readonly property bool hasMeter: fraction !== null && fraction !== undefined
+  // Where the label starts: after the swatch and its gap. Worked out
+  // here, not read off rowLabel.x, which the anchors update with the
+  // width and made a binding loop.
+  readonly property real labelX: swatch ? Math.round(statRow.statsCard.unit * 0.6) + Math.round(statRow.statsCard.unit * 0.4) : 0
   // A meter row of the card's rows that lines up with the others; one
   // whose value is too long for the card's value column has no meter.
   readonly property bool columns: hasMeter && !labelFills && statRow.statsCard.valueWidth(text) <= statRow.statsCard.valueColumn && statRow.statsCard.valueColumn > 0
@@ -48,7 +52,7 @@ Item {
     width: statRow.labelFills ? parent.width - value.width - meter.width - statRow.statsCard.unit * 1.2
       : statRow.columns ? statRow.statsCard.labelColumn
       : Math.max(0, Math.min(Math.max(statRow.labelWidth, Math.min(implicitWidth + statRow.statsCard.unit * 0.6, parent.width * 0.5)),
-          parent.width - value.width - statRow.statsCard.unit * 0.6))
+          parent.width - statRow.labelX - value.width - statRow.statsCard.unit * 0.6))
     text: statRow.label
     elide: Text.ElideRight
     color: statRow.statsCard.theme.subtle
@@ -81,8 +85,10 @@ Item {
     // Never over the label: it takes the room the label can spare (all
     // but a short label's own width), and past that it elides. A row
     // with a meter takes the card's value column, right-aligned in it.
+    // The label starts after a swatch (labelX): leaving it out ran the
+    // Network card's "VPN" into its value.
     width: statRow.columns ? statRow.statsCard.valueColumn
-      : Math.min(implicitWidth, parent.width - Math.min(rowLabel.implicitWidth, statRow.statsCard.unit * 3) - statRow.statsCard.unit * 0.6)
+      : Math.min(implicitWidth, parent.width - statRow.labelX - Math.min(rowLabel.implicitWidth, statRow.statsCard.unit * 3) - statRow.statsCard.unit * 0.6)
     horizontalAlignment: Text.AlignRight
     elide: Text.ElideRight
     text: statRow.text

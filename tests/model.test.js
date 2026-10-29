@@ -6,10 +6,10 @@ import { Model, Profiles, run } from "./modelfixtures.js"
 const tests = {
   "normalize fills missing edges and defaults to enabled"() {
     const { panels, ...entry } = Model.normalize({ top: "350.4", left: -5 })
-    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(entry, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, clockSeconds: "off", dim: 60, top: 350, bottom: 0, left: 0, right: 0 })
     assert.deepEqual([...panels], ["gpu", "cpu", "memory", "network"])
     const { panels: _, ...empty } = Model.normalize(undefined)
-    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
+    assert.deepEqual(empty, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, clockSeconds: "off", dim: 60, top: 0, bottom: 0, left: 0, right: 0 })
   },
   "panels keep known names, once each, in the order given"() {
     assert.deepEqual([...Model.panelList(["network", "gpu", "rainbow", "gpu"])], ["network", "gpu"])
@@ -17,7 +17,7 @@ const tests = {
     assert.deepEqual([...Model.panelList("gpu")], [...Model.STATS_DEFAULT])
     assert.deepEqual([...Model.panelList(undefined)], ["gpu", "cpu", "memory", "network"])
     assert.deepEqual([...Model.normalize({ panels: ["system", "cpu"] }).panels], ["system", "cpu"])
-    assert.deepEqual([...Model.STATS_PANELS], ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system"])
+    assert.deepEqual([...Model.STATS_PANELS], ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system", "clock"])
     assert.equal(Model.panelFrom("Now playing"), "media")
     assert.equal(Model.panelFrom("temperatures"), "temps")
     assert.equal(Model.panelFrom("Sensors"), "temps")
@@ -281,5 +281,31 @@ const tests = {
     assert.equal(Model.paceName(1), "No animation")
   },
 }
+
+Object.assign(tests, {
+  "normalize keeps the clock's seconds, off by default"() {
+    assert.equal(Model.normalize({}).clockSeconds, "off")
+    assert.equal(Model.normalize({ clockSeconds: "blink" }).clockSeconds, "blink")
+    assert.equal(Model.normalize({ clockSeconds: "bar" }).clockSeconds, "bar")
+    assert.equal(Model.normalize({ clockSeconds: true }).clockSeconds, "off")
+    assert.ok(!Model.same(Model.normalize({}), Model.normalize({ clockSeconds: "bar" })))
+    assert.ok(!Profiles.isDefault({ clockSeconds: "blink" }))
+    assert.equal(Model.nextClockSeconds("off"), "blink")
+    assert.equal(Model.nextClockSeconds("bar"), "off")
+    assert.equal(Model.nextClockSeconds("nonsense"), "off")
+  },
+  "the Clock panel goes by its name and a few others"() {
+    assert.equal(Model.panelFrom("clock"), "clock")
+    assert.equal(Model.panelFrom("time"), "clock")
+    assert.equal(Model.panelFrom("Clock"), "clock")
+    assert.equal(Model.panelName("clock"), "Clock")
+    // Opt-in: a new monitor's dashboard does not get it.
+    assert.ok(Model.STATS_DEFAULT.indexOf("clock") === -1)
+  },
+  "paceShort names each pace in a word for its button"() {
+    assert.deepEqual([...Model.STATS_PACES].map(Model.paceShort), ["Display", "60", "30", "15", "Off"])
+    assert.equal(Model.paceShort("nonsense"), "30")
+  },
+})
 
 run(tests)

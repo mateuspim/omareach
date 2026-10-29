@@ -1,6 +1,7 @@
 .pragma library
 .import "StatsFormat.js" as Format
 .import "StatsGpu.js" as Gpu
+.import "StatsClockView.js" as ClockView
 .import "StatsRows.js" as Rows
 .import "StatsSystem.js" as Sys
 
@@ -11,10 +12,9 @@
 
 var ICONS = {
   gpu: "\u{f08ae}", igpu: "\u{f08ae}", temps: "\u{f050f}", battery: "\u{f0079}", media: "\u{f075a}", system: "\u{f02fd}", cpu: "\u{f061a}", memory: "\u{f035b}", network: "\u{f0200}",
-  disks: "\u{f02ca}", processes: "\u{f0279}"
+  disks: "\u{f02ca}", processes: "\u{f0279}", clock: "\u{f0954}"
 }
-
-var TITLES = { gpu: "GPU", igpu: "iGPU", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes" }
+var TITLES = { gpu: "GPU", igpu: "iGPU", temps: "Sensors", battery: "Battery", media: "Now playing", system: "System", cpu: "CPU", memory: "Memory", network: "Network", disks: "Disks", processes: "Processes", clock: "Clock" }
 
 // What one panel shows, ready to draw: a title with an icon and the box's
 // color, an optional big value with a caption, graphs (each with an
@@ -34,7 +34,7 @@ function view(panel, state, palette, room, wide, span, shown) {
   var result = {
     title: TITLES[panel] || panel, icon: ICONS[panel] || "", color: palette.boxes[panel] || palette.accent,
     info: "", value: "", valueColor: palette.foreground, caption: "", captionTip: "", note: "", noteTip: "",
-    graphs: [], bars: [], stack: [], rows: [], lists: [], empty: "", logo: false, alert: 0
+    graphs: [], bars: [], stack: [], rows: [], lists: [], digits: "", empty: "", logo: false, alert: 0
   }
   var build = VIEWS[panel]
   if (build) build(result, state, palette, g, room, wide, span, shown || [])
@@ -402,6 +402,9 @@ var VIEWS = {
       else if (charging(laptop) && laptop.power > 0 && laptop.full !== null) v.caption = hours((laptop.full - laptop.energy) / laptop.power) + " to full"
       else v.caption = String(laptop.status || "").toLowerCase()
       v.info = charging(laptop) ? "charging" : laptop.status === "Discharging" ? "on battery" : ""
+      // The emptiest peripheral too: a short card drops the device rows.
+      var emptiest = known.slice().sort(function(a, b) { return percent(a) - percent(b) })[0]
+      if (emptiest) v.info = label(emptiest) + " " + Format.formatPercent(percent(emptiest))
       if (laptop.power !== null) v.rows.push(Rows.row("Power", laptop.power.toFixed(1) + " W", null))
       if (laptop.energy !== null && laptop.full) v.rows.push(Rows.row("Energy", laptop.energy.toFixed(1) + " / " + laptop.full.toFixed(1) + " Wh", null))
       // Health against what it held new: low health is what wears out.
@@ -458,6 +461,7 @@ var VIEWS = {
     }
   },
 
+  clock: ClockView.clockView,
   system: function(v, state, palette, g, room, wide, span, shown) {
     var system = state.system
     if (!system) { v.empty = "Waiting for data"; return }

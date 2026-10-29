@@ -106,8 +106,12 @@ function stallRow(value, g) {
   return row("Stalled", value.toFixed(1) + "%", level, Format.gradientAt(g.level, level))
 }
 
-// Units of width from which the load average names its minutes.
+// Units of width from which the load average names its minutes, and
+// under which its numbers take one space between them: two cut a
+// half-width wide card's row to "Lo…  3.54  6.60  10.…".
 var LOAD_LABEL_SPAN = 22
+
+var LOAD_COMPACT_SPAN = 16
 
 // Units of width under which the CPU's clock leaves the headline's
 // caption ("load · 5.30 GHz") for a row of its own.
@@ -125,7 +129,7 @@ function loadRow(loadavg, threads, g, span) {
   var numbers = loadavg.map(function(n) { return n.toFixed(2) })
   var text = span >= LOAD_LABEL_SPAN
     ? ["1m", "5m", "15m"].map(function(name, i) { return name + " " + numbers[i] }).join("  ")
-    : numbers.join("  ")
+    : numbers.join(span < LOAD_COMPACT_SPAN ? " " : "  ")
   var level = threads > 0 ? loadavg[0] / threads : null
   return row("Load", text, level, level === null ? "" : Format.gradientAt(g.level, level))
 }
@@ -157,6 +161,10 @@ var NOTE_ROWS = 0.8
 
 var GAP_ROWS = 0.3
 
+// The Clock's blocky digits at their smallest: they take whatever room
+// the rows leave, like a graph, but stay big enough to read.
+var DIGIT_ROWS = 2.5
+
 // How many of a view's rows fit `room` rows: all of it beside the headline
 // in a wide card, what the headline leaves in a stacked one. Rows that would be cut in half are left
 // out, and whatever room is over goes to the graphs.
@@ -169,7 +177,7 @@ function rowsThatFit(v, room, wide) {
 
 // Rows' room a view's headline takes, without the gap below it.
 function headlineRows(v) {
-  return (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
+  return (v.digits ? DIGIT_ROWS : 0) + (v.value ? VALUE_ROWS : 0) + (v.note ? NOTE_ROWS : 0) + v.graphs.length * GRAPH_ROWS + (v.bars.length ? BARS_ROWS : 0) + (v.stack.length ? STACK_ROWS : 0)
 }
 
 // A wide card's headline has the card's `room` rows beside the rows, and

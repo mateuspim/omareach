@@ -14,21 +14,26 @@ Column {
   readonly property var edge: panel.edge
   readonly property bool single: Model.SINGLE_FILLS.indexOf(edge.fill) !== -1
   readonly property bool clock: edge.fill === "clock"
+  // The clock's options: 12-hour, Date and Seconds for the Clock fill;
+  // only 12-hour for a dashboard with the Clock panel, which follows it.
+  readonly property var clockOptions: clock ? ["hours", "date", "seconds"]
+    : edge.fill === "stats" && edge.panels.indexOf("clock") !== -1 ? ["hours"]
+    : []
   readonly property bool dimmed: edge.fill === "dim"
   readonly property bool many: panel.screenNames.length > 1
   spacing: Style.spacing.sm
 
   // --- keyboard cursor (Panel.pageKey) ----------------------------------------
   // In reading order: the fills, the dim slider, the two edges a single
-  // fill can go on, the clock's two options, and Same on every monitor.
+  // fill can go on, the clock's options, and Same on every monitor.
   readonly property int dimAt: Model.FILLS.length
   readonly property int edgeAt: dimAt + (dimmed ? 1 : 0)
   readonly property int optionsAt: edgeAt + (single ? 2 : 0)
-  readonly property int everyAt: optionsAt + (clock ? 2 : 0)
+  readonly property int everyAt: optionsAt + clockOptions.length
   readonly property var cursorRows: Model.gridRows(Model.FILLS.length, fillGrid.columns)
-    .concat(dimmed ? [1] : [], single ? [2] : [], clock ? [2] : [], many ? [1] : [])
+    .concat(dimmed ? [1] : [], single ? [2] : [], clockOptions.length ? [clockOptions.length] : [], many ? [1] : [])
   readonly property var cursorKeys: Model.FILLS.map(function(f) { return "fill:" + f })
-    .concat(dimmed ? ["dim"] : [], single ? ["edge:largest", "edge:topBottom"] : [], clock ? ["hours", "date"] : [], many ? ["every"] : [])
+    .concat(dimmed ? ["dim"] : [], single ? ["edge:largest", "edge:topBottom"] : [], clockOptions, many ? ["every"] : [])
   readonly property int cursorHome: Model.FILLS.indexOf(edge.fill)
   function cursorOn(index) { return panel.page === "fill" && panel.pageCursor === index }
   function activate(index, alt) {
@@ -36,8 +41,12 @@ Column {
       if (alt) panel.setFillEverywhere(Model.FILLS[index])
       else panel.setFill(Model.FILLS[index])
     } else if (index >= edgeAt && index < optionsAt) panel.setClockEdge(Model.CLOCK_EDGES[index - edgeAt])
-    else if (index === optionsAt && clock) panel.setClockHours(edge.clockHours === 12 ? 24 : 12)
-    else if (index === optionsAt + 1 && clock) panel.toggleClockDate()
+    else if (index >= optionsAt && index < everyAt) {
+      var option = clockOptions[index - optionsAt]
+      if (option === "hours") panel.setClockHours(edge.clockHours === 12 ? 24 : 12)
+      else if (option === "date") panel.toggleClockDate()
+      else panel.cycleClockSeconds()
+    }
     else if (index === everyAt && many) panel.setFillEverywhere(edge.fill)
   }
   // Left and right move the dim slider while the cursor is on it.
@@ -188,14 +197,15 @@ Column {
     }
   }
 
-  // Only for the clock: how it reads.
+  // Only for the clock, and a dashboard's Clock panel: how it reads.
   Row {
-    id: clockOptions
-    visible: page.clock
+    id: clockOptionRow
+    visible: page.clockOptions.length > 0
     width: parent.width
     spacing: Style.spacing.md
+    readonly property real cellWidth: (width - spacing * (page.clockOptions.length - 1)) / Math.max(1, page.clockOptions.length)
     Button {
-      width: (clockOptions.width - clockOptions.spacing) / 2
+      width: clockOptionRow.cellWidth
       hasCursor: page.cursorOn(page.optionsAt)
       text: "12-hour"
       iconText: "󰥔"
@@ -207,7 +217,8 @@ Column {
       onClicked: { page.panel.setClockHours(page.edge.clockHours === 12 ? 24 : 12); page.panel.refocus() }
     }
     Button {
-      width: (clockOptions.width - clockOptions.spacing) / 2
+      visible: page.clock
+      width: clockOptionRow.cellWidth
       hasCursor: page.cursorOn(page.optionsAt + 1)
       text: "Date"
       iconText: "󰃭"
@@ -217,6 +228,22 @@ Column {
       foreground: page.panel.foreground
       fontFamily: page.panel.fontFamily
       onClicked: { page.panel.toggleClockDate(); page.panel.refocus() }
+    }
+    // Against burn-in: something moves every second. Three choices, few
+    // enough to cycle through.
+    Button {
+      visible: page.clock
+      width: clockOptionRow.cellWidth
+      hasCursor: page.cursorOn(page.optionsAt + 2)
+      text: page.edge.clockSeconds === "blink" ? "Blink" : page.edge.clockSeconds === "bar" ? "Bar" : "Seconds"
+      iconText: "󱎫"
+      tooltipText: "Seconds  ·  " + Model.CLOCK_SECONDS_NAMES[page.edge.clockSeconds]
+        + "\nA blinking colon (on one line) or a bar under the time that fills over the minute, so something moves every second. Click for the next"
+      selected: page.edge.clockSeconds !== "off"
+      bordered: true
+      foreground: page.panel.foreground
+      fontFamily: page.panel.fontFamily
+      onClicked: { page.panel.cycleClockSeconds(); page.panel.refocus() }
     }
   }
 

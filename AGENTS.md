@@ -12,7 +12,7 @@ indexes the rest; update the spec a change touches.
 
 ## Project
 
-- Layout: every `.qml` and `.js` file, `stats.sh`, `vpn.sh` and
+- Layout: every `.qml` and `.js` file, `stats.sh`, `vpn.sh`, `zones.sh` and
   `cpu-power.sh` at the root. Omarchy loads the entry points in
   `manifest.json` (`Service.qml`, `Panel.qml`); QML finds siblings through
   `qmldir`, so a new component goes in `qmldir` too. Don't add QML subfolders. Tests in `tests/`, guide images
@@ -21,9 +21,10 @@ indexes the rest; update the spec a change touches.
   (`Model.js` entries and fills, `ModelEdges.js` sizes and presets,
   `ModelProfiles.js` profiles, `ModelArt.js` clock and logo), the `Stats*.js` scripts (the dashboard's data: `Stats.js` keeps
   the state, `StatsProc.js`, `StatsNet.js`, `StatsSystem.js` and
-  `StatsGpu.js` parse, `StatsFormat.js` has the palette and text forms) or
+  `StatsGpu.js` parse, `StatsFormat.js` has the palette and text forms),
   `StatsTiles.js`, `StatsViews.js` and `StatsRows.js` (its layout, panels
-  and shared rows), so Node can test it.
+  and shared rows) or `Clock.js` and `StatsClockView.js` (the Clock
+  panel's dates, zones, sun and rows), so Node can test it.
   `tests/qmljs.js` loads them; `tests/modelfixtures.js` and
   `tests/statsfixtures.js` load each family with its imports.
 - Naming: OmaReach everywhere: plugin id and IPC target `pym.omareach`,

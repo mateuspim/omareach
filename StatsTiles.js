@@ -33,6 +33,19 @@ var WIDE_CARD = 2
 // text, and every label and value was cut short.
 var WIDE_SPAN = 22
 
+// Units of width under which a wide Clock card stacks its digits over its
+// rows like a narrow card: beside them, the digits share the width with
+// the rows and came out a few pixels high on a half-width card.
+var CLOCK_BESIDE_SPAN = 44
+
+// Whether a card puts its headline beside its rows: past WIDE_CARD for
+// its height, and for the Clock only when wide enough that its digits
+// keep their size.
+function wideCard(panel, width, height, unit) {
+  if (!(width > height * WIDE_CARD)) return false
+  return panel !== "clock" || width >= CLOCK_BESIDE_SPAN * unit
+}
+
 function roomy(card, unit) {
   if (card.width > card.height * WIDE_CARD) return card.height >= WIDE_ROOM * unit && card.width >= WIDE_SPAN * unit
   return card.height >= CARD_ROOM * unit

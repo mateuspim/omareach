@@ -1,9 +1,11 @@
 import QtQuick
+import Quickshell.Io
 import qs.Ui
 import qs.Commons
 import "Model.js" as Model
 import "StatsTiles.js" as Tiles
 import "StatsViews.js" as Views
+import "Clock.js" as Clock
 
 // The panel's Stats page: which panels this monitor's dashboard shows, in
 // which order, and the settings every dashboard shares. Without the Stats
@@ -57,23 +59,63 @@ Column {
     picked = shown[Math.min(index, shown.length - 1)] || ""
   }
 
+  // The Clock panel's settings, shared by every monitor, show while this
+  // monitor's dashboard has it: the other zones and the sun.
+  readonly property bool clockShown: active && shown.indexOf("clock") !== -1
+  readonly property var zones: panel.reserve.statsZones
+  readonly property bool canAddZone: zones.length < Clock.MAX_ZONES
+  readonly property var location: panel.reserve.statsLocation
+  // tzdata's zones with their coordinates, read while the section shows:
+  // the list to add from, and where this machine's zone is for the sun.
+  property var zoneTab: []
+  readonly property var localPlace: {
+    var zone = panel.reserve.stats.localZone
+    for (var i = 0; i < zoneTab.length; i++) if (zoneTab[i].zone === zone) return zoneTab[i]
+    return null
+  }
+  FileView {
+    path: page.clockShown ? "/usr/share/zoneinfo/zone1970.tab" : ""
+    printErrors: false
+    onLoaded: page.zoneTab = Clock.parseZoneTab(text())
+  }
+  // Edits like any other, so the panel's undo goes.
+  function removeZone(zone) {
+    panel.undo = null
+    panel.reserve.setStatsZones(zones.filter(function(z) { return z !== zone }))
+  }
+  function addZone(zone) {
+    panel.undo = null
+    panel.reserve.setStatsZones(zones.concat([zone]))
+  }
+  // Off, or on at this machine's zone's main city: near enough for the
+  // sun, and nothing to type or look up. IPC takes exact coordinates.
+  function toggleSun() {
+    panel.undo = null
+    if (location) panel.reserve.setStatsLocation(null)
+    else if (localPlace) panel.reserve.setStatsLocation({ lat: localPlace.lat, lon: localPlace.lon })
+  }
+
   // --- keyboard cursor (Panel.pageKey) ----------------------------------------
   // In reading order: the shown panels two to a row, the toolbar's three
-  // buttons, the panels to add three to a row, then Animation and CPU
-  // power, then Mesh addresses. Off the Stats fill, its one button, then
-  // the last two rows.
+  // buttons, the panels to add three to a row, then Animation's five
+  // choices, CPU power and Mesh addresses, then with the Clock panel its zones and
+  // Add zone, and Sun. Off the Stats fill, its one button, then the
+  // every-monitor rows.
   readonly property int toolbarAt: active ? shown.length : 1
   readonly property int addAt: toolbarAt + (active && shown.length ? 3 : 0)
   readonly property int everyAt: addAt + (active ? hidden.length : 0)
-  readonly property int meshAt: everyAt + (cpuPowerShown ? 2 : 1)
+  readonly property int meshAt: everyAt + Model.STATS_PACES.length + (cpuPowerShown ? 1 : 0)
+  readonly property int zonesAt: meshAt + 1
+  readonly property int sunAt: zonesAt + zones.length + (canAddZone ? 1 : 0)
   readonly property var cursorRows: (active
       ? Model.gridRows(shown.length, shownGrid.columns).concat(shown.length ? [3] : [], Model.gridRows(hidden.length, addGrid.columns))
       : [1])
-    .concat([cpuPowerShown ? 2 : 1, 1])
+    .concat([Model.STATS_PACES.length, cpuPowerShown ? 2 : 1], clockShown ? [zones.length + (canAddZone ? 1 : 0), 1] : [])
   readonly property var cursorKeys: (active
       ? shown.map(function(p) { return "shown:" + p }).concat(shown.length ? ["earlier", "later", "hide"] : [], hidden.map(function(p) { return "add:" + p }))
       : ["use"])
-    .concat(["pace"], cpuPowerShown ? ["cpu"] : [], ["mesh"])
+    .concat(Model.STATS_PACES.map(function(pace) { return "pace:" + pace }), cpuPowerShown ? ["cpu"] : [], ["mesh"],
+      clockShown ? zones.map(function(z) { return "zone:" + z }).concat(canAddZone ? ["addzone"] : [], ["sun"]) : [])
   // A panel just added moves from Add to the shown ones; the cursor goes
   // with it.
   function cursorFallback(key) { return key.indexOf("add:") === 0 ? "shown:" + key.slice(4) : "" }
@@ -100,14 +142,26 @@ Column {
       var name = hidden[index - addAt]
       if (alt) panel.togglePanelEverywhere(name)
       else panel.togglePanel(name)
-    } else if (index === everyAt) paceDropdown.open()
-    else if (index === everyAt + 1 && cpuPowerShown) changeCpuPower()
+    } else if (index >= everyAt && index < everyAt + Model.STATS_PACES.length) panel.reserve.setStatsPace(Model.STATS_PACES[index - everyAt])
+    else if (index === meshAt - 1 && cpuPowerShown) changeCpuPower()
     else if (index === meshAt) toggleMeshAddress()
+    else if (clockShown && index >= zonesAt && index < zonesAt + zones.length) removeZone(zones[index - zonesAt])
+    else if (clockShown && canAddZone && index === sunAt - 1) zoneRow.openList()
+    else if (clockShown && index === sunAt) toggleSun()
   }
   // Returns where the cursor goes: onto the panel that took the hidden
   // one's place, or the last one.
+  // What the last remove() did, for the panel's toast; "" for nothing.
+  property string removed: ""
   function remove(index) {
+    removed = ""
+    if (clockShown && index >= zonesAt && index < zonesAt + zones.length) {
+      removed = "Took " + Clock.zoneCity(zones[index - zonesAt]) + " off the clock"
+      removeZone(zones[index - zonesAt])
+      return index
+    }
     if (!active || index >= addAt) return index
+    removed = "Hid " + selectedName
     hideSelected(false)
     return index < toolbarAt ? Math.max(0, Math.min(index, shown.length - 1)) : index
   }
@@ -286,42 +340,66 @@ Column {
     foreground: page.panel.foreground
     fontFamily: page.panel.fontFamily
   }
+  // How smoothly every dashboard moves, against how often it redraws: a
+  // button each, since a list opened here ran past the panel's bottom.
+  Item {
+    id: paceRow
+    width: parent.width
+    height: cpuPowerButton.implicitHeight
+    Text {
+      id: paceLabel
+      textFormat: Text.PlainText
+      anchors.verticalCenter: parent.verticalCenter
+      text: "Animation"
+      color: page.panel.foreground
+      font.family: page.panel.fontFamily
+      font.pixelSize: Style.font.caption
+      font.bold: true
+    }
+    Row {
+      id: paceButtons
+      anchors.left: paceLabel.right
+      anchors.leftMargin: Style.spacing.md
+      anchors.right: parent.right
+      spacing: Style.spacing.sm
+      Repeater {
+        model: Model.STATS_PACES
+        Button {
+          required property int modelData
+          required property int index
+          width: (paceButtons.width - paceButtons.spacing * (Model.STATS_PACES.length - 1)) / Model.STATS_PACES.length
+          // As tall as the buttons with icons below.
+          height: cpuPowerButton.implicitHeight
+          text: Model.paceShort(modelData)
+          horizontalPadding: Style.spacing.xs
+          selected: page.panel.reserve.statsPace === modelData
+          hasCursor: page.cursorOn(page.everyAt + index)
+          bordered: true
+          foreground: page.panel.foreground
+          fontFamily: page.panel.fontFamily
+          tooltipText: "Animation  ·  " + Model.paceName(modelData)
+            + (modelData === 0 ? "\nGraphs and meters move at the monitor's refresh rate" : modelData === 1 ? "\nNumbers change once a second, with nothing moving in between" : "\nGraphs and meters move " + modelData + " times a second")
+          onClicked: { page.panel.reserve.setStatsPace(modelData); page.panel.refocus() }
+        }
+      }
+    }
+  }
   Item {
     id: everyRow
     width: parent.width
     height: cpuPowerButton.implicitHeight
     readonly property real cellWidth: page.cpuPowerShown ? (width - Style.spacing.md) / 2 : width
-    // How smoothly every dashboard moves, against how often it redraws: a
-    // list, since five choices are too many to cycle through blind.
-    Dropdown {
-      id: paceDropdown
-      width: everyRow.cellWidth
-      anchors.verticalCenter: parent.verticalCenter
-      showLabel: false
-      // As tall as the button beside it, which may be hidden.
-      rowHeight: Math.round(cpuPowerButton.implicitHeight)
-      value: String(page.panel.reserve.statsPace)
-      options: Model.STATS_PACES.map(function(pace) { return { value: String(pace), label: "Animation  ·  " + Model.paceName(pace) } })
-      hasCursor: page.cursorOn(page.everyAt)
-      foreground: page.panel.foreground
-      fontFamily: page.panel.fontFamily
-      onChanged: function(value) { page.panel.reserve.setStatsPace(Number(value)) }
-      // The list takes the keys while open; they come back to the panel
-      // when it closes, picked or not.
-      onPopupOpenChanged: if (!popupOpen) page.panel.refocus()
-    }
     // The CPU's power draw needs its energy counter, which is root's
     // until a udev rule opens it; hidden where there is none.
     Button {
       id: cpuPowerButton
       visible: page.cpuPowerShown
       width: everyRow.cellWidth
-      anchors.right: parent.right
       anchors.verticalCenter: parent.verticalCenter
       text: "CPU power  ·  " + (page.panel.reserve.cpuPower === "on" ? "On" : "Enable")
       iconText: "󱐋"
       selected: page.panel.reserve.cpuPower === "on"
-      hasCursor: page.cursorOn(page.everyAt + 1)
+      hasCursor: page.cursorOn(page.meshAt - 1)
       bordered: true
       foreground: page.panel.foreground
       fontFamily: page.panel.fontFamily
@@ -330,22 +408,63 @@ Column {
         : "The CPU's energy counter is root's, so the CPU panel cannot show its power draw.\nClick to open it with a udev rule: a terminal shows the commands and asks first"
       onClicked: { page.changeCpuPower(); page.panel.refocus() }
     }
+    // A mesh's address (Tailscale's 100.x) on the Network card, for ssh
+    // from another machine; off, the card says only that it is on, since
+    // the dashboard is on screen for anyone in the room.
+    Button {
+      width: everyRow.cellWidth
+      anchors.right: parent.right
+      anchors.verticalCenter: parent.verticalCenter
+      // "Mesh addresses" at half width ran off the button; the tooltip
+      // says it in full.
+      text: "Mesh  ·  " + (page.panel.reserve.statsTunnelAddress ? "Shown" : "Hidden")
+      iconText: "󰖂"
+      selected: page.panel.reserve.statsTunnelAddress
+      hasCursor: page.cursorOn(page.meshAt)
+      bordered: true
+      foreground: page.panel.foreground
+      fontFamily: page.panel.fontFamily
+      tooltipText: (page.panel.reserve.statsTunnelAddress
+        ? "Mesh addresses: shown\nThe Network panel shows the address of each mesh, such as Tailscale.\nClick to show only that it is on"
+        : "Mesh addresses: hidden\nThe Network panel shows only that a mesh, such as Tailscale, is on.\nClick to show its address too")
+      onClicked: { page.toggleMeshAddress(); page.panel.refocus() }
+    }
   }
-  // A mesh's address (Tailscale's 100.x) on the Network card, for ssh
-  // from another machine; off, the card says only that it is on, since
-  // the dashboard is on screen for anyone in the room.
-  Button {
+
+  // --- the Clock panel ---------------------------------------------------------
+  Item { visible: page.clockShown; width: 1; height: Style.spacing.sm }
+  PanelSectionHeader {
+    visible: page.clockShown
+    text: "CLOCK  ·  EVERY MONITOR"
+    foreground: page.panel.foreground
+    fontFamily: page.panel.fontFamily
+  }
+  PanelZoneRow {
+    id: zoneRow
+    visible: page.clockShown
     width: parent.width
-    text: "Mesh addresses  ·  " + (page.panel.reserve.statsTunnelAddress ? "Shown" : "Hidden")
-    iconText: "󰖂"
-    selected: page.panel.reserve.statsTunnelAddress
-    hasCursor: page.cursorOn(page.meshAt)
+    stats: page
+    rowHeight: Math.round(sunButton.implicitHeight)
+  }
+  Button {
+    id: sunButton
+    visible: page.clockShown
+    width: parent.width
+    text: page.location ? "Sun  ·  " + page.location.lat + ", " + page.location.lon : "Sun  ·  Off"
+    iconText: "󰖜"
+    selected: page.location !== null
+    enabled: page.location !== null || page.localPlace !== null
+    opacity: enabled ? 1 : 0.4
+    hasCursor: page.cursorOn(page.sunAt)
     bordered: true
     foreground: page.panel.foreground
     fontFamily: page.panel.fontFamily
-    tooltipText: page.panel.reserve.statsTunnelAddress
-      ? "The Network panel shows the address of each mesh, such as Tailscale.\nClick to show only that it is on"
-      : "The Network panel shows only that a mesh, such as Tailscale, is on.\nClick to show its address too"
-    onClicked: { page.toggleMeshAddress(); page.panel.refocus() }
+    tooltipText: (page.location
+      ? "The Clock panel shows sunrise and sunset here, worked out on this machine.\nClick to turn it off"
+      : page.localPlace
+        ? "Click to show sunrise and sunset on the Clock panel, for " + page.localPlace.city + ", the city of this machine's time zone. Nothing is looked up online"
+        : "This machine's time zone has no city to work the sun out for")
+      + "\nExact coordinates: omarchy-shell pym.omareach location <lat>,<lon>"
+    onClicked: { page.toggleSun(); page.panel.refocus() }
   }
 }

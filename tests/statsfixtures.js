@@ -12,7 +12,9 @@ export const Gpu = load("StatsGpu.js", { Proc, Sys })
 export const Stats = load("Stats.js", { Gpu, Net, Proc, Sys })
 export const Tiles = load("StatsTiles.js")
 export const Rows = load("StatsRows.js", { Format })
-export const Views = load("StatsViews.js", { Format, Gpu, Rows, Sys })
+export const Clock = load("Clock.js")
+export const ClockView = load("StatsClockView.js", { Clock, Rows })
+export const Views = load("StatsViews.js", { ClockView, Format, Gpu, Rows, Sys })
 
 // Objects made inside the sandbox have its prototypes; copy them out so
 // strict deep equality compares only their contents.
@@ -95,7 +97,7 @@ card2	amdgpu	freq	2200000000
 ${extra}@end
 `
 
-export const ALL_PANELS = ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system"]
+export const ALL_PANELS = ["gpu", "igpu", "cpu", "memory", "network", "disks", "processes", "temps", "battery", "media", "system", "clock"]
 
 // A state with data in every panel, and a palette to draw it in.
 export const palette = Format.palette({ foreground: "#d8dee9", accent: "#81a1c1", red: "#bf616a", yellow: "#ebcb8b", green: "#a3be8c", cyan: "#88c0d0", blue: "#81a1c1", magenta: "#b48ead" })
@@ -104,3 +106,8 @@ filled = Stats.step(filled, frame(11, [150, 0, 0, 950, 0, 0, 0, 0, 0, 0], "@proc
   "0, NVIDIA GeForce RTX 4080, 55, 7551, 16376, 54, 149.65, 320.00, 2790, 30, 0, 12",
   { identity: "Spotify", title: "Song", artist: "Band", album: "Record", art: "", playing: true, position: 10, length: 200 })
 export const full = filled
+
+// The Clock reads the sampler's clock rather than the samples (StatsFill).
+export const clockState = Object.assign({}, full, { clockHours: 24, clock: {
+  now: new Date(2026, 9, 28, 14, 5, 30).getTime(), dateText: "", zones: [], offsets: {}, local: "Europe/Lisbon", reminders: [], location: null
+} })

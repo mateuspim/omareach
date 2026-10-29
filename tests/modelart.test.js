@@ -152,4 +152,19 @@ const tests = {
   },
 }
 
+Object.assign(tests, {
+  "the clock's seconds: a colon lit on even seconds, a bar over the minute"() {
+    assert.equal(Art.colonLit(new Date(2026, 9, 28, 14, 5, 0)), true)
+    assert.equal(Art.colonLit(new Date(2026, 9, 28, 14, 5, 1)), false)
+    assert.equal(Art.secondsFraction(new Date(2026, 9, 28, 14, 5, 0)), 0)
+    assert.equal(Art.secondsFraction(new Date(2026, 9, 28, 14, 5, 30)), 0.5)
+    assert.equal(Art.untilNextSecond(new Date(2026, 9, 28, 14, 5, 30, 250)), 750)
+    // The colon's cells are marked, so a blink can hide only them.
+    const bitmap = Art.clockBitmap("12:34")
+    assert.equal(bitmap.cells.filter(c => c.colon).length, 2)
+    assert.ok(bitmap.cells.filter(c => c.colon).every(c => c.x === 8))
+    assert.equal(Art.clockBitmap(["12", "34"]).cells.filter(c => c.colon).length, 0)
+  },
+})
+
 run(tests)

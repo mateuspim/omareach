@@ -20,7 +20,7 @@ Grid {
       "Enter", "Press the button under the cursor  ·  ⇧ right-click it",
       "X", "Hide a stats panel, delete a profile",
       "⇧ J / K", "Move a stats panel earlier / later",
-      "U / Ctrl Z", "Undo a clear, zero, preset or profile change",
+      "U / Ctrl Z", "Undo a clear, zero, preset, profile change or hidden panel",
       "Space / P", "Pause monitor",
       "F", "Next fill",
       "C", "Clock or stats on the largest edge / top or bottom",

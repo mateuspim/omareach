@@ -16,8 +16,9 @@ Item {
     anchors.right: idleButton.left
     anchors.rightMargin: Style.spacing.md
     anchors.verticalCenter: parent.verticalCenter
-    text: footer.panel.showKeys ? "? hide shortcuts" : "? shortcuts"
-    color: footer.panel.subtle
+    // What a key just did, then the hint again.
+    text: footer.panel.toast || (footer.panel.showKeys ? "? hide shortcuts" : "? shortcuts")
+    color: footer.panel.toast ? footer.panel.foreground : footer.panel.subtle
     elide: Text.ElideRight
     font.family: footer.panel.fontFamily
     font.pixelSize: Style.font.caption

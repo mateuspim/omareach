@@ -71,6 +71,10 @@ Panel {
   readonly property bool canUndo: undo !== null && (undo.output === undefined || undo.output === output)
   readonly property var profileNames: Profiles.profileNames(reserve.profiles)
   property bool showKeys: false
+  // What a key just did, for a few seconds in the footer (PanelToast).
+  readonly property string toast: toaster.text
+  function say(text) { toaster.say(text + (canUndo ? "  ·  U to undo" : "")) }
+  Reserve.PanelToast { id: toaster }
   // The page showing below the preview. It is kept while the shell runs,
   // so the panel opens where it was left.
   property string page: Model.PAGES[0]
@@ -99,6 +103,9 @@ Panel {
   // button in `cursorKeys`, and says what Enter does in `activate(index, alt)`.
   property int pageCursor: -1
   onPageChanged: pageCursor = -1
+  // The Stats page's selected panel, which the preview marks among its
+  // numbered cards while that page shows.
+  readonly property string statsSelected: statsPage.selected
   readonly property var pageView: page === "fill" ? fillPage
     : page === "stats" ? statsPage
     : page === "profiles" ? profilesPage
@@ -132,6 +139,7 @@ Panel {
     pickedAlign = ""
     undo = null
     showKeys = false
+    toaster.clear()
     pageCursor = -1
     // The profile on screen, ready to update or tie to these monitors; a
     // placeholder of its name looked typed but left Save and Auto off.
@@ -225,7 +233,7 @@ Panel {
   // and clock edge, so they all look alike; one undo puts them all back.
   function setFillEverywhere(fill) {
     var before = reserve.outputs
-    var settings = { fill: fill, dim: edge.dim, clockEdge: edge.clockEdge, clockHours: edge.clockHours, clockDate: edge.clockDate, panels: edge.panels }
+    var settings = { fill: fill, dim: edge.dim, clockEdge: edge.clockEdge, clockHours: edge.clockHours, clockDate: edge.clockDate, clockSeconds: edge.clockSeconds, panels: edge.panels }
     screenNames.forEach(function(name) { reserve.update(name, settings) })
     if (!Profiles.sameOutputs(before, reserve.outputs))
       undo = { outputs: before, text: "Restore each monitor's own fill" }
@@ -245,18 +253,17 @@ Panel {
     undo = null
     reserve.setClockHours(output, hours)
   }
-  function toggleClockDate() {
-    undo = null
-    reserve.setClockDate(output, !edge.clockDate)
-  }
+  function toggleClockDate() { undo = null; reserve.setClockDate(output, !edge.clockDate) }
+  function cycleClockSeconds() { undo = null; reserve.setClockSeconds(output, Model.nextClockSeconds(edge.clockSeconds)) }
+  // Hiding a panel throws away its place in the order, so it can be
+  // undone; showing one cannot lose anything.
   function togglePanel(panel) {
-    undo = null
+    var hiding = edge.panels.indexOf(panel) !== -1
+    var saved = outputUndo()
     reserve.togglePanel(output, panel)
+    undo = hiding ? { output: output, entry: saved.entry, text: "Show " + Model.panelName(panel).toLowerCase() + " again" } : null
   }
-  function movePanel(panel, delta) {
-    undo = null
-    reserve.movePanel(output, panel, delta)
-  }
+  function movePanel(panel, delta) { undo = null; reserve.movePanel(output, panel, delta) }
   // Gives every connected monitor this monitor's choice for `panel`,
   // flipped; one undo puts them all back.
   function togglePanelEverywhere(panel) {
@@ -322,17 +329,17 @@ Panel {
     else if (key === Qt.Key_Down || key === Qt.Key_J) cursor = Math.min(reserve.edgeNames.length - 1, cursor + 1)
     else if (key === Qt.Key_Left || key === Qt.Key_H) nudge(cursorEdge, -step)
     else if (key === Qt.Key_Right || key === Qt.Key_L) nudge(cursorEdge, step)
-    else if (key === Qt.Key_0 || key === Qt.Key_Backspace || key === Qt.Key_Delete) zero(cursorEdge)
-    else if (key === Qt.Key_U || (key === Qt.Key_Z && event.modifiers & Qt.ControlModifier)) undoLast()
+    else if (key === Qt.Key_0 || key === Qt.Key_Backspace || key === Qt.Key_Delete) { if (edge[cursorEdge]) { zero(cursorEdge); say("Zeroed " + cursorEdge) } }
+    else if (key === Qt.Key_U || (key === Qt.Key_Z && event.modifiers & Qt.ControlModifier)) { if (canUndo) { var undone = undo.text; undoLast(); say(undone) } }
     else if (key === Qt.Key_Tab) cycleOutput(shift ? -1 : 1)
     else if (key === Qt.Key_Backtab) cycleOutput(-1)
-    else if (key === Qt.Key_Space || key === Qt.Key_P) toggleEnabled(output)
-    else if (key === Qt.Key_F) setFill(Model.nextFill(edge.fill))
-    else if (key === Qt.Key_C) setClockEdge(edge.clockEdge === "largest" ? "topBottom" : "largest")
+    else if (key === Qt.Key_Space || key === Qt.Key_P) { toggleEnabled(output); if (reserved) say(edge.enabled ? "Resumed " + output : "Paused " + output) }
+    else if (key === Qt.Key_F) { setFill(Model.nextFill(edge.fill)); say("Fill  ·  " + Model.fillName(edge.fill)) }
+    else if (key === Qt.Key_C) { setClockEdge(edge.clockEdge === "largest" ? "topBottom" : "largest"); if (Model.SINGLE_FILLS.indexOf(edge.fill) !== -1) say(Model.fillName(edge.fill) + " on the " + (edge.clockEdge === "largest" ? "largest edge" : "top or bottom")) }
     else if (key === Qt.Key_A) cycleAlign()
     else if (key === Qt.Key_R) toggleRuler()
-    else if (key === Qt.Key_I) cycleIdle()
-    else if (key >= Qt.Key_1 && key <= Qt.Key_9) applyProfileAt(key - Qt.Key_1)
+    else if (key === Qt.Key_I) { cycleIdle(); say("Idle  ·  " + Model.idleName(reserve.idleBlack)) }
+    else if (key >= Qt.Key_1 && key <= Qt.Key_9) { var index = key - Qt.Key_1; if (index < profileNames.length) { applyProfileAt(index); say("Applied " + profileNames[index]) } }
     else if (key === Qt.Key_S) focusProfileField()
     else return
     event.accepted = true
@@ -372,6 +379,7 @@ Panel {
       // away, the page says where it goes (the next one).
       var removing = view.cursorKeys[pageCursor]
       var next = view.remove(pageCursor)
+      if (view.removed) say(view.removed)
       var kept = view.cursorKeys.indexOf(removing)
       pageCursor = kept !== -1 ? kept : Model.cursorAfter(view.cursorKeys, "", next)
       return true

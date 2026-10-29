@@ -208,4 +208,29 @@ const tests = {
   },
 }
 
+Object.assign(tests, {
+  "a Clock card goes wide only when its digits keep their size"() {
+    // Half of the portrait strip: stacked, digits across the width.
+    assert.equal(Tiles.wideCard("clock", 500, 200, 12), false)
+    assert.equal(Tiles.wideCard("gpu", 500, 200, 12), true)
+    // The whole strip: beside its rows.
+    assert.equal(Tiles.wideCard("clock", 1000, 200, 12), true)
+    assert.equal(Tiles.wideCard("clock", 300, 200, 12), false)
+  },
+  "eleven panels with the Clock still fit the portrait strip"() {
+    // The owner's portable display: 648x1152 at 1.67, stats on 750 px.
+    const panels = ALL_PANELS.filter(panel => panel !== "igpu")
+    const portrait = Tiles.fit(panels, 648, 750)
+    assert.equal(portrait.cards.length, panels.length)
+    for (const card of portrait.cards) assert.ok(card.width >= Tiles.WIDE_SPAN * portrait.unit || card.width <= card.height * Tiles.WIDE_CARD, JSON.stringify(card))
+  },
+  "a narrow row of load averages keeps one space between them"() {
+    const g = palette.gradients
+    assert.equal(Rows.loadRow([3.54, 6.6, 10.12], 24, g, 22).text, "1m 3.54  5m 6.60  15m 10.12")
+    assert.equal(Rows.loadRow([3.54, 6.6, 10.12], 24, g, 16).text, "3.54  6.60  10.12")
+    // A half-width wide card on the portrait strip: 13 units of rows.
+    assert.equal(Rows.loadRow([3.54, 6.6, 10.12], 24, g, 13).text, "3.54 6.60 10.12")
+  },
+})
+
 run(tests)

@@ -14,6 +14,12 @@ Item {
   property var panels: []
   property real pixelRatio: 1
   property var shift: ({ x: 0, y: 0 })
+  // The monitor's clock hours, 24 or 12, for the Clock card.
+  property int clockHours: 24
+  // In the panel's preview on the Stats page: each card shows its place
+  // in `panels`, as that page numbers them, and `cardPicked` stands out.
+  property bool cardKeys: false
+  property string cardPicked: ""
   readonly property var sampler: Reserve.ReserveState.stats
   readonly property real boardWidth: width / pixelRatio
   readonly property real boardHeight: height / pixelRatio
@@ -26,6 +32,10 @@ Item {
   // another one already shows.
   readonly property var laidOut: grid.cards.map(function(card) { return card.panel })
   readonly property int unit: grid.unit
+  // The Clock card's state, apart from the samples: only it reads the
+  // clock that ticks every second, so the other cards keep to stats.sh's
+  // pace.
+  readonly property var clockState: ({ time: sampler.data.time, clock: sampler.clockData, clockHours: root.clockHours })
 
   Item {
     width: root.boardWidth
@@ -44,12 +54,15 @@ Item {
         width: Math.round(modelData.width)
         height: Math.round(modelData.height)
         unit: root.unit
+        panel: modelData.panel
         theme: root.sampler.palette
+        badge: root.cardKeys ? root.panels.indexOf(modelData.panel) + 1 : 0
+        picked: root.cardKeys && modelData.panel === root.cardPicked
         // Rows that fit under the title, a row and its gap each, for
         // panels whose lists grow to fill the card.
         readonly property int room: Math.floor((height - Math.round(root.unit * 1.6) - root.unit)
           / (Math.round(root.unit * 1.25) + Math.round(root.unit * 0.35)))
-        view: Views.view(modelData.panel, root.sampler.data, root.sampler.palette, room, width > height * Tiles.WIDE_CARD, Math.floor(width / root.unit), root.laidOut)
+        view: Views.view(modelData.panel, modelData.panel === "clock" ? root.clockState : root.sampler.data, root.sampler.palette, room, Tiles.wideCard(modelData.panel, width, height, root.unit), Math.floor(width / root.unit), root.laidOut)
       }
     }
   }

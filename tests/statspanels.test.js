@@ -1,5 +1,5 @@
 import assert from "node:assert/strict"
-import { plain, frame, ALL_PANELS, palette, full, Format, Net, Sys, Stats, Rows, Views, run } from "./statsfixtures.js"
+import { plain, frame, ALL_PANELS, palette, full, clockState, Format, Net, Sys, Stats, Rows, Views, run } from "./statsfixtures.js"
 
 // StatsViews.js: what each panel shows, and the network, processes, system,
 // battery, media and disks panels.
@@ -8,11 +8,11 @@ const tests = {}
 
 ALL_PANELS.forEach(panel => {
   tests["view of " + panel + " has a title, a box color and content"] = () => {
-    const view = Views.view(panel, full, palette)
+    const view = Views.view(panel, panel === "clock" ? clockState : full, palette)
     assert.ok(view.title && view.icon, panel)
     assert.match(view.color, /^#[0-9a-f]{6}$/)
     assert.equal(view.empty, "", panel + " should have data")
-    assert.ok(view.rows.length + view.lists.length + view.bars.length + view.graphs.length + (view.media ? 1 : 0) + (view.value ? 1 : 0) > 0, panel)
+    assert.ok(view.rows.length + view.lists.length + view.bars.length + view.graphs.length + (view.media ? 1 : 0) + (view.value ? 1 : 0) + (view.digits ? 1 : 0) > 0, panel)
     for (const row of view.rows) assert.ok(row.fraction === null || (row.fraction >= 0 && row.fraction <= 1), JSON.stringify(row))
     const empty = Views.view(panel, Stats.empty(), palette)
     assert.equal(empty.title, view.title)
@@ -161,7 +161,11 @@ Object.assign(tests, {
     const view = Views.view("battery", laptop, palette)
     assert.equal(view.value, "81%")
     assert.equal(view.caption, "3h 12m left")
-    assert.equal(view.info, "on battery")
+    // The emptiest peripheral takes the title's room, which a short card
+    // keeps when it drops the device rows.
+    assert.equal(view.info, "MX Keys 20%")
+    const bare = Object.assign({}, laptop, { power: [laptop.power[0]] })
+    assert.equal(Views.view("battery", bare, palette).info, "on battery")
     // A peripheral reporting only a level reads as about that full.
     assert.deepEqual(plain(view.rows.map(row => [row.label, row.text])), [["Power", "12.5 W"], ["Energy", "40.0 / 50.0 Wh"], ["MX Keys", "20%"]])
     // A low battery that is not charging asks for attention.
@@ -296,6 +300,28 @@ Object.assign(tests, {
     assert.ok(wide.rows.some(row => /°C/.test(row.text)))
     const narrow = Views.view("disks", full, palette, 6, false, 20)
     assert.ok(!narrow.rows.some(row => /°C/.test(row.text)))
+  },
+  "the clock view draws the time in digits over the date and the rest"() {
+    const view = Views.view("clock", clockState, palette, 6, false, 30)
+    assert.equal(view.digits, "14:05:30")
+    assert.equal(view.value, "")
+    assert.equal(view.valueColor, palette.boxes.clock)
+    assert.equal(view.info, "Lisbon")
+    assert.deepEqual(plain(view.rows.map(row => row.label)), ["Date", "Week", "Today"])
+    // The day's meter is in the Clock's color.
+    assert.equal(view.rows[2].color, palette.boxes.clock)
+    assert.ok(view.rows[2].fraction > 0.58 && view.rows[2].fraction < 0.59)
+    // A short card keeps the date, leaving the week; a narrow one the
+    // minutes alone.
+    assert.deepEqual(plain(Views.view("clock", clockState, palette, 4, false, 30).rows.map(row => row.label)), ["Date"])
+    assert.equal(Views.view("clock", clockState, palette, 6, false, 20).digits, "14:05")
+    // With other zones the info line gives way to their rows.
+    const zoned = Object.assign({}, clockState, { clock: Object.assign({}, clockState.clock, { zones: ["Asia/Tokyo"], offsets: { "Asia/Tokyo": 540 } }) })
+    const withZone = Views.view("clock", zoned, palette, 9, false, 30)
+    assert.equal(withZone.info, "")
+    assert.equal(withZone.rows[2].label, "Tokyo")
+    assert.equal(withZone.rows[2].tip, "Asia/Tokyo")
+    assert.equal(Views.view("clock", full, palette).empty, "Waiting for data")
   },
   "the processes view names merged processes with their count"() {
     const state = Object.assign(Stats.empty(), { processes: [{ pid: 2, name: "brave", cpu: 80, count: 3 }] })

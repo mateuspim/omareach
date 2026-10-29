@@ -21,7 +21,7 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
                               ▲      │                │                                     │
                      Panel ───┘      │                └─ fullscreen fitting (hyprctl, dispatch)
                      IPC  ───────────┘                                                      ▼
-                                     └─► StatsSampler ◄── stats.sh, vpn.sh, nvidia-smi       StatsFill ─► StatsCard
+                                     └─► StatsSampler ◄── stats.sh, vpn.sh, zones.sh, nvidia-smi       StatsFill ─► StatsCard
 ```
 
 - **`ReserveState.qml`** (singleton) holds every monitor's settings,
@@ -79,7 +79,11 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   ([ADR 7](adr/0007-let-an-idle-dgpu-rest.md)), and adds the shell's MPRIS
   players and UPower devices. Its clock ticks at the animation pace. While a
   VPN or mesh tunnel is up it runs `vpn.sh` every 10 s and lays where each
-  goes over the frames.
+  goes over the frames. While a Clock panel shows, a second clock ticks on
+  the second for it alone (`clockData`, apart from the samples, so the
+  other cards keep to stats.sh's pace), `zones.sh` gives the other zones'
+  offsets every 5 minutes, and `omarchy-reminder show --json` the
+  reminders every 30 s.
 - **`Stats.js`** is the pure data side: frames and `nvidia-smi` lines into
   one state, counters into rates, history. It imports the parsers:
   **`StatsProc.js`** (frame sections, CPU, memory, disks, pressure,
@@ -91,7 +95,10 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   **`StatsTiles.js`**, how panels tile a strip (`Tiles.fit`),
   **`StatsViews.js`**, the rows each panel shows at a given size, and
   **`StatsRows.js`**, the rows, warning levels and headline fitting the
-  panels share.
+  panels share. **`Clock.js`** is the Clock panel's data: the ISO week,
+  time zone arithmetic (QML's JavaScript ignores `toLocaleString`'s
+  `timeZone`), the sunrise equation, reminders and tzdata's zone list;
+  **`StatsClockView.js`** draws it as the Clock card's rows.
 - **`StatsFill.qml`** lays out the grid; **`StatsCard.qml`** draws one
   panel; **`StatsGraph.qml`** the scrolling history graphs;
   **`StatsEase.qml`** eases meters between samples. A card's rows are
@@ -102,6 +109,9 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   `nordvpn status`, `mullvad status`, `piactl get`, `ivpn status`,
   `windscribe-cli status` and ExpressVPN's CLI; for a plain `tun0`, each
   installed client that may own it.
+- **`zones.sh`** prints each zone's UTC offset with bash's
+  `printf %(%z)T` under that `TZ`, no process per zone, and this
+  machine's own zone.
 - **`cpu-power.sh`** reports whether the CPU's RAPL counter can be read and,
   from a visible terminal, opens or closes it as root
   ([ADR 8](adr/0008-cpu-power-through-a-visible-terminal.md)).
@@ -110,7 +120,7 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
 
 | What | Where |
 | --- | --- |
-| Monitors, profiles, automatic profiles, idle, animation pace | `~/.config/omarchy/omareach.json` |
+| Monitors, profiles, automatic profiles, idle, animation pace, the Clock panel's zones and location | `~/.config/omarchy/omareach.json` |
 | The CPU power rule, only if you enable it | `/etc/udev/rules.d/70-rapl-energy.rules` |
 
 Nothing else is written. The wallpaper is read through
@@ -121,7 +131,8 @@ theme's `colors.toml`.
 ## Tests
 
 `npm test` runs the Node tests in `tests/`: a `model*.test.js` per model script,
-a `stats*.test.js` per stats script, `sampler.test.js` (stats.sh frames) and
+a `stats*.test.js` per stats script, `sampler.test.js` (stats.sh frames),
+`clock.test.js` (Clock.js and zones.sh), `vpn.test.js` (vpn.sh against fake clients) and
 `cpupower.test.js` (cpu-power.sh against a fake sysfs). GitHub Actions runs
 the same on every push. UI is checked in an offscreen harness, never on the
 live screens ([ADR 4](adr/0004-offscreen-render-harness.md)).

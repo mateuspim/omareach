@@ -61,7 +61,7 @@ function clockBitmap(lines) {
       if (!glyph) continue
       for (var row = 0; row < glyph.length; row++)
         for (var column = 0; column < glyph[row].length; column++)
-          if (glyph[row].charAt(column) === "#") cells.push({ x: x + column, y: top + row })
+          if (glyph[row].charAt(column) === "#") cells.push({ x: x + column, y: top + row, colon: lines[n].charAt(i) === ":" })
       x += glyph[0].length + 1
     }
   }
@@ -150,6 +150,23 @@ function logoStep(width, height) {
 // Milliseconds until the next minute starts, for a clock that ticks on it.
 function untilNextMinute(date) {
   return 60000 - date.getSeconds() * 1000 - date.getMilliseconds()
+}
+
+// Milliseconds until the next second starts, for a clock with seconds.
+function untilNextSecond(date) {
+  return 1000 - date.getMilliseconds()
+}
+
+// Whether a blinking colon (clockSeconds "blink") is lit: every other
+// second, on the even ones, so it is lit as each minute turns.
+function colonLit(date) {
+  return date.getSeconds() % 2 === 0
+}
+
+// How full the seconds bar (clockSeconds "bar") is: empty as the minute
+// turns, a sixtieth more each second.
+function secondsFraction(date) {
+  return date.getSeconds() / 60
 }
 
 // Milliseconds until clockShift next moves, for the logo, which has no

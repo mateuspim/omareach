@@ -47,6 +47,8 @@ omarchy plugin validate .    # the manifest, as the marketplace checks it
 | `statsproc.test.js`, `statsnet.test.js`, `statssystem.test.js`, `statsgpu.test.js` | The parser of the same name. |
 | `statsformat.test.js` | `StatsFormat.js`: palette, heat levels, text forms. |
 | `statsviews.test.js` | `StatsTiles.js` and `StatsRows.js`: tiling a strip, fitting rows under a headline. |
+| `clock.test.js` | `Clock.js` and `zones.sh`: weeks, zones, the sun, reminders, the Clock card's rows. |
+| `vpn.test.js` | `vpn.sh` against fake clients on `PATH`, read back through `Net.parseVpnInfo`. |
 | `statspanels.test.js`, `statshardware.test.js` | `StatsViews.js`: each panel's rows. |
 | `sampler.test.js` | Runs the real `stats.sh` on this machine and parses its frames ([spec](../specs/stats-frames.md)). |
 | `cpupower.test.js` | `cpu-power.sh` against a made-up powercap tree (`CPU_POWER_SYSFS`); never needs root. |
@@ -96,7 +98,7 @@ H=$(mktemp -d)/harness
 mkdir -p $H/plugin $H/Ui $H/bin $H/runtime $H/out $H/powercap/intel-rapl:0 \
   $H/home/.config/omarchy $H/home/.local/state/omarchy/current/theme
 chmod 700 $H/runtime
-cp *.qml *.js qmldir icon.svg cpu-power.sh stats.sh $H/plugin/
+cp *.qml *.js qmldir icon.svg *.sh $H/plugin/
 ln -s /usr/share/omarchy/shell/Commons $H/Commons
 for f in /usr/share/omarchy/shell/Ui/*; do
   [ "${f##*/}" = KeyboardPanel.qml ] || ln -s "$f" "$H/Ui/${f##*/}"

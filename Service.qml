@@ -5,6 +5,7 @@ import Quickshell.Io
 import Quickshell.Wayland
 import "." as Reserve
 import "Model.js" as Model
+import "Clock.js" as Clock
 import "ModelEdges.js" as Edges
 import "ModelProfiles.js" as Profiles
 
@@ -45,10 +46,10 @@ Scope {
         return beside ? Model.fullscreenFill(shown) : shown
       }
 
-      ReservedEdge { screen: output.modelData; side: "top"; pixels: output.edge.top; fill: output.fillFor("top"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
-      ReservedEdge { screen: output.modelData; side: "bottom"; pixels: output.edge.bottom; fill: output.fillFor("bottom"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
-      ReservedEdge { screen: output.modelData; side: "left"; pixels: output.edge.left; fill: output.fillFor("left"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
-      ReservedEdge { screen: output.modelData; side: "right"; pixels: output.edge.right; fill: output.fillFor("right"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "top"; pixels: output.edge.top; fill: output.fillFor("top"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; clockSeconds: output.edge.clockSeconds; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "bottom"; pixels: output.edge.bottom; fill: output.fillFor("bottom"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; clockSeconds: output.edge.clockSeconds; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "left"; pixels: output.edge.left; fill: output.fillFor("left"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; clockSeconds: output.edge.clockSeconds; panels: output.edge.panels }
+      ReservedEdge { screen: output.modelData; side: "right"; pixels: output.edge.right; fill: output.fillFor("right"); dim: output.edge.dim; clockHours: output.edge.clockHours; clockDate: output.edge.clockDate; clockSeconds: output.edge.clockSeconds; panels: output.edge.panels }
     }
   }
 
@@ -158,7 +159,8 @@ Scope {
 
     function status(): string {
       var result = {
-        idleBlack: root.state.idleBlack, idle: root.idle, statsPace: root.state.statsPace, statsTunnelAddress: root.state.statsTunnelAddress, ruler: root.state.ruler,
+        idleBlack: root.state.idleBlack, idle: root.idle, statsPace: root.state.statsPace, statsTunnelAddress: root.state.statsTunnelAddress,
+        statsZones: root.state.statsZones, statsLocation: root.state.statsLocation, ruler: root.state.ruler,
         profile: root.state.currentProfile, profiles: Profiles.profileNames(root.state.profiles),
         autoProfiles: root.state.autoProfiles, monitors: root.state.connected, outputs: {}
       }
@@ -199,6 +201,34 @@ Scope {
         root.state.setClockDate(name, state === "on")
         return "Clock date  ·  " + state
       })
+    }
+    // What the clock fill does every second: "off", "blink" (the colon)
+    // or "bar" (a bar under the time fills over the minute).
+    function clockSeconds(output: string, mode: string): string {
+      if (Model.CLOCK_SECONDS.indexOf(mode) === -1) return "Say " + Model.CLOCK_SECONDS.join(", ")
+      return root.each(output, function(name) {
+        root.state.setClockSeconds(name, mode)
+        return "Clock seconds  ·  " + Model.CLOCK_SECONDS_NAMES[mode]
+      })
+    }
+    // The Clock panel's other time zones, as a comma list of IANA names
+    // (at most three), or "none".
+    function zones(zones: string): string {
+      var names = zones.trim() === "none" ? [] : zones.split(",").map(function(zone) { return zone.trim() })
+      var list = Clock.zoneList(names)
+      if (list.length !== names.filter(Boolean).length) return "Say up to " + Clock.MAX_ZONES + " zone names, such as Europe/Lisbon, or none"
+      root.state.setStatsZones(list)
+      return "Time zones  ·  " + (list.length ? list.join(", ") : "none")
+    }
+    // Where the Clock panel works out sunrise and sunset, as "lat,lon" in
+    // degrees, or "none".
+    function location(location: string): string {
+      if (location.trim() === "none") { root.state.setStatsLocation(null); return "Sun  ·  off" }
+      var parts = location.split(",")
+      var place = parts.length === 2 ? Clock.location({ lat: parts[0].trim(), lon: parts[1].trim() }) : null
+      if (!place) return "Say a latitude and longitude, such as 38.72,-9.14, or none"
+      root.state.setStatsLocation(place)
+      return "Sun  ·  " + place.lat + ", " + place.lon
     }
     // The stats panels, as a comma list of names, "all" or "none".
     function panels(output: string, panels: string): string {
@@ -347,6 +377,7 @@ Scope {
     required property int dim
     required property int clockHours
     required property bool clockDate
+    required property string clockSeconds
     required property var panels
     active: pixels > 0
 
@@ -381,6 +412,7 @@ Scope {
           dim: reserved.dim / 100
           clockHours: reserved.clockHours
           clockDate: reserved.clockDate
+          clockSeconds: reserved.clockSeconds
           panels: reserved.panels
           size: reserved.pixels
           screenWidth: reserved.screen.width

@@ -16,7 +16,7 @@ const tests = {
   "fit trims hand-edited entries to the shared limit"() {
     const fitted = Edges.fit(Model.normalize({ top: 5000, bottom: 400, left: 100, right: 100 }), 1080, 1920)
     const { panels, ...edges } = fitted
-    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
+    assert.deepEqual(edges, { enabled: true, fill: "black", clockEdge: "largest", clockHours: 24, clockDate: false, clockSeconds: "off", dim: 60, top: 1728, bottom: 0, left: 100, right: 100 })
     const kept = Edges.fit(Model.normalize({ top: 400, bottom: 200 }), 1080, 1920)
     assert.equal(kept.top, 400)
     assert.equal(kept.bottom, 200)

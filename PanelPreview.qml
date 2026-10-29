@@ -51,6 +51,12 @@ Item {
         dim: panel.edge.dim / 100
         clockHours: panel.edge.clockHours
         clockDate: panel.edge.clockDate
+        clockSeconds: panel.edge.clockSeconds
+        // On the Stats page, each card carries its number in that page's
+        // list, and the selected one stands out: the key from a card to
+        // its entry.
+        cardKeys: panel.page === "stats"
+        cardPicked: panel.statsSelected
         panels: panel.edge.panels
         pixelRatio: preview.ratio
         size: panel.edge[modelData] * preview.ratio

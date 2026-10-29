@@ -14,7 +14,10 @@ Omarchy logo, a clock or the stats dashboard, and black when idle.
   (or with **12-hour**, H:MM without AM or PM)
   in big blocky digits, in the theme's accent color, on one edge: the
   largest reserved edge, or with **Top or bottom** the larger of those two
-  whenever either is reserved. The monitor's other edges stay black. The
+  whenever either is reserved. With **Seconds**, which cycles through
+  **Blink** and **Bar**, something moves every second against burn-in:
+  the colon blinks (on a one-line time), or a thin bar under the time
+  fills over the minute. The monitor's other edges stay black. The
   digits are always upright and as large as the edge allows: one line on a
   wide edge, hours over minutes on a tall one. With **Date** on, the date
   ("Sat 24 Oct", in your locale) goes under the time, or beside it on a

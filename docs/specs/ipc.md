@@ -38,6 +38,9 @@ user-facing summary; this page is the exact behaviour.
 | `dim` | monitor, percent | Dimmed fill's darkness, clamped to 10 to 90. Answers `Dim <n>%`. |
 | `clockHours` | monitor, hours | The clock fill's hours, `12` or `24`. Answers `Clock  ·  <n>-hour`; other numbers `Say 12 or 24`. |
 | `clockDate` | monitor, `on` or `off` | The date under or beside the clock, where the edge has room for it. Answers `Clock date  ·  on` or `off`; other states `Say on or off`. |
+| `clockSeconds` | monitor, `off`, `blink` or `bar` | What the clock fill does every second. Answers `Clock seconds  ·  Off`, `Blinking colon` or `Seconds bar`; other modes `Say off, blink, bar`. |
+| `zones` | list | The Clock panel's other time zones for every monitor: a comma list of up to three IANA names (`Asia/Tokyo,Europe/Lisbon`), or `none`. Answers `Time zones  ·  <names>` or `none`; more than three or a name that is not one `Say up to 3 zone names, such as Europe/Lisbon, or none`. A well-formed name tzdata lacks is kept but shows no row. |
+| `location` | `lat,lon` | Where the Clock panel works out sunrise and sunset, in degrees, rounded to two places; `none` turns the sun off. Answers `Sun  ·  <lat>, <lon>` or `Sun  ·  off`; anything else `Say a latitude and longitude, such as 38.72,-9.14, or none`. |
 | `panels` | monitor, list | Stats panels as a comma list, in the order the dashboard shows them, `all`, or `none` (or `""`). Names are keys, labels or aliases (below). Unknown: `Unknown panel in <list>; one of …`. Answers `Stats: <names>`, plus `  ·  shown with the stats fill` when the monitor's fill is not `stats`. |
 | `panel` | monitor, panel, state | One panel `on` (it goes last), `off`, or `""` to flip it. Other states: `Say on or off`. Answers as `panels`. |
 | `edge` | monitor, side, pixels | `top`, `bottom`, `left` or `right`, clamped to 0 and the side's budget (90% of the axis, less the opposite edge). Unknown side: `Unknown edge <x>; one of top, bottom, left, right`. |
@@ -56,7 +59,8 @@ Panel aliases (`Model.PANEL_ALIASES`): `mem`, `ram` → memory; `net` →
 network; `disk`, `io` → disks; `procs`, `top processes` → processes;
 `integrated` → igpu; `temperatures`, `temp`, `sensors`, `fan`, `fans` →
 temps (the Sensors panel); `bat` → battery; `music`, `mpris`,
-`nowplaying` → media; `uptime` → system. Labels such as `Now playing`
+`nowplaying` → media; `uptime` → system; `time`, `date`, `reminders`,
+`sun` → clock. Labels such as `Now playing`
 work too.
 
 Profile names follow the [settings rules](settings.md#profiles): trimmed,
@@ -70,13 +74,15 @@ at most 32 characters, matched exactly and then ignoring case.
   "idle": false,
   "statsPace": 30,
   "statsTunnelAddress": false,
+  "statsZones": ["Asia/Tokyo"],
+  "statsLocation": { "lat": 38.72, "lon": -9.14 },
   "ruler": "",
   "profile": "Desk",
   "profiles": ["Desk", "Gaming"],
   "autoProfiles": { "Desk": ["DP-5", "Dell Inc. DELL U2720Q 1A2B3C4"] },
   "monitors": ["DP-5", "Dell Inc. DELL U2720Q 1A2B3C4"],
   "outputs": {
-    "DP-4": { "enabled": true, "fill": "stats", "clockEdge": "largest", "clockHours": 24, "clockDate": false, "dim": 60, "panels": ["gpu", "cpu", "memory", "network"], "top": 660, "bottom": 0, "left": 0, "right": 0 }
+    "DP-4": { "enabled": true, "fill": "stats", "clockEdge": "largest", "clockHours": 24, "clockDate": false, "clockSeconds": "off", "dim": 60, "panels": ["gpu", "cpu", "memory", "network"], "top": 660, "bottom": 0, "left": 0, "right": 0 }
   }
 }
 ```
