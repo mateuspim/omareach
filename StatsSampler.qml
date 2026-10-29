@@ -6,8 +6,13 @@ import Quickshell.Services.UPower
 import qs.Commons
 import qs.Commons as Commons
 import "Model.js" as Model
+import "ModelArt.js" as Art
 import "Stats.js" as Stats
 import "Clock.js" as Clock
+import "StatsFormat.js" as Format
+import "StatsGpu.js" as Gpu
+import "StatsNet.js" as Net
+import "StatsSystem.js" as Sys
 
 // The stats fill's data: runs stats.sh (and nvidia-smi for the GPU) while
 // `running` and keeps what they print in `data` (Stats.ingest), with the
@@ -51,10 +56,10 @@ QtObject {
     onTriggered: root.now = Date.now()
   }
 
-  // How to read the NVIDIA GPU (Stats.nvidiaPoll): nvidia-smi's loop, a
+  // How to read the NVIDIA GPU (Gpu.nvidiaPoll): nvidia-smi's loop, a
   // single reading every `checkEvery` ms while it rests, or nothing while
   // it sleeps. stats.sh leaves nvidia-smi out unless the loop runs.
-  readonly property string nvidiaMode: Stats.nvidiaPoll(data)
+  readonly property string nvidiaMode: Gpu.nvidiaPoll(data)
   readonly property int checkEvery: 10000
   onNvidiaModeChanged: if (sampler.running) { restarting = true; restartTimer.restart() }
 
@@ -83,19 +88,19 @@ QtObject {
     stdout: SplitParser {
       splitMarker: "@end\n"
       onRead: function(frame) {
-        root.data = Stats.withTunnelInfo(Stats.step(root.data, frame, root.gpuLines, root.media ? root.track() : null, root.batteries ? Stats.upowerBatteries(root.peripherals()) : null), root.tunnelInfo)
+        root.data = Net.withTunnelInfo(Stats.step(root.data, frame, root.gpuLines, root.media ? root.track() : null, root.batteries ? Sys.upowerBatteries(root.peripherals()) : null), root.tunnelInfo)
         root.gpuLines = []
       }
     }
     onExited: if (root.running && !root.restarting) samplerRetry.restart()
   }
 
-  // Where the VPNs and meshes that are up go (vpn.sh, Stats.parseVpnInfo),
+  // Where the VPNs and meshes that are up go (vpn.sh, Net.parseVpnInfo),
   // laid over every frame. The kernel only says a tunnel is up, so each
   // client is asked: every 10 s while one is up, and as soon as the set
   // changes; never while none is.
   readonly property string vpnScript: decodeURIComponent(String(Qt.resolvedUrl("vpn.sh")).replace(/^file:\/\//, ""))
-  readonly property string tunnelKey: Stats.tunnelClients(data.network).join(" ")
+  readonly property string tunnelKey: Net.tunnelClients(data.network).join(" ")
   property var tunnelInfo: null
   // The tunnels the run in flight was started for: one that ends after
   // they changed answered for the old set, so its answer is dropped and
@@ -113,7 +118,7 @@ QtObject {
   }
   property Process vpnProcess: Process {
     stdout: StdioCollector {
-      onStreamFinished: if (root.vpnAskedFor === root.tunnelKey) root.tunnelInfo = root.tunnelKey ? Stats.parseVpnInfo(text) : null
+      onStreamFinished: if (root.vpnAskedFor === root.tunnelKey) root.tunnelInfo = root.tunnelKey ? Net.parseVpnInfo(text) : null
     }
     onExited: if (root.vpnAskedFor !== root.tunnelKey && root.tunnelKey && root.running) Qt.callLater(root.askVpn)
   }
@@ -174,7 +179,7 @@ QtObject {
     }
   }
 
-  // UPower's devices for Stats.upowerBatteries: it knows Bluetooth
+  // UPower's devices for Sys.upowerBatteries: it knows Bluetooth
   // headsets, which the kernel does not list. Read once a frame.
   // An index loop: the list is array-like, and map on it gives no array.
   function peripherals() {
@@ -191,7 +196,7 @@ QtObject {
   }
 
   // A resting GPU's single reading, now and then: one that finds it busy
-  // brings the loop back (Stats.nvidiaPoll).
+  // brings the loop back (Gpu.nvidiaPoll).
   property Process gpuCheck: Process {
     command: root.gpuQuery
     stdout: SplitParser {
@@ -205,10 +210,10 @@ QtObject {
     onTriggered: if (!root.gpuCheck.running) root.gpuCheck.running = true
   }
 
-  // The track of the player Stats.pickPlayer picks; null without players.
+  // The track of the player Sys.pickPlayer picks; null without players.
   // Read once a frame, so its position moves on.
   function track() {
-    var player = Stats.pickPlayer(Mpris.players.values)
+    var player = Sys.pickPlayer(Mpris.players.values)
     if (!player) return null
     return {
       identity: player.identity, title: player.trackTitle, artist: player.trackArtist, album: player.trackAlbum,
@@ -302,18 +307,18 @@ QtObject {
   property var colors: ({})
   readonly property string themeColors: String(Commons.Color.foreground) + String(Commons.Color.background) + String(Commons.Color.accent) + String(Commons.Color.urgent) + String(Commons.Color.muted)
   onThemeColorsChanged: themeFile.reload()
-  readonly property var palette: Stats.palette(colors, {
+  readonly property var palette: Format.palette(colors, {
     foreground: hex(Commons.Color.foreground), background: hex(Commons.Color.background),
     accent: hex(Commons.Color.accent), urgent: hex(Commons.Color.urgent), muted: hex(Commons.Color.muted)
   })
-  function hex(color) { return Model.hexColor(color.r, color.g, color.b) }
+  function hex(color) { return Art.hexColor(color.r, color.g, color.b) }
 
   property FileView themeFile: FileView {
     path: Commons.Color.currentThemePath + "/colors.toml"
     watchChanges: true
     printErrors: false
     onFileChanged: reload()
-    onLoaded: root.colors = Stats.parseColors(text())
+    onLoaded: root.colors = Format.parseColors(text())
     onLoadFailed: root.colors = ({})
   }
 }

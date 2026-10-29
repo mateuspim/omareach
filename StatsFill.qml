@@ -1,11 +1,11 @@
 import QtQuick
 import qs.Commons
 import "." as Reserve
-import "Stats.js" as Stats
+import "StatsTiles.js" as Tiles
 import "StatsViews.js" as Views
 
 // The stats fill: the monitor's chosen panels tiled over the strip as
-// btop-style cards (Views.fit), with live numbers from the shared
+// btop-style cards (Tiles.fit), with live numbers from the shared
 // sampler. It is laid out at the strip's real size and scaled by
 // `pixelRatio`, so the panel's small preview shows the same layout. The
 // whole board moves with the burn-in `shift`, a third of a unit per step.
@@ -27,7 +27,7 @@ Item {
   // second GPU) take no card. A string, so the grid is laid out again only
   // when that set changes, not on every sample.
   readonly property string availableKey: Views.availablePanels(panels, sampler.data).join(",")
-  readonly property var grid: Views.fit(availableKey ? availableKey.split(",") : [], boardWidth, boardHeight)
+  readonly property var grid: Tiles.fit(availableKey ? availableKey.split(",") : [], boardWidth, boardHeight)
   // The panels that made it onto the strip, so a card can leave out what
   // another one already shows.
   readonly property var laidOut: grid.cards.map(function(card) { return card.panel })
@@ -62,7 +62,7 @@ Item {
         // panels whose lists grow to fill the card.
         readonly property int room: Math.floor((height - Math.round(root.unit * 1.6) - root.unit)
           / (Math.round(root.unit * 1.25) + Math.round(root.unit * 0.35)))
-        view: Views.view(modelData.panel, modelData.panel === "clock" ? root.clockState : root.sampler.data, root.sampler.palette, room, Views.wideCard(modelData.panel, width, height, root.unit), Math.floor(width / root.unit), root.laidOut)
+        view: Views.view(modelData.panel, modelData.panel === "clock" ? root.clockState : root.sampler.data, root.sampler.palette, room, Tiles.wideCard(modelData.panel, width, height, root.unit), Math.floor(width / root.unit), root.laidOut)
       }
     }
   }

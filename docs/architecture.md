@@ -33,10 +33,12 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   helpers: the wallpaper link, the Omarchy logo, the stats sampler and the
   CPU power status.
 - **`Model.js`** is the pure logic, without QML: normalizing entries,
-  storage keys ([ADR 2](adr/0002-key-settings-by-monitor-description.md)),
-  limits and budgets, aspect presets, profiles and automatic profiles, which
-  edge a fill shows on, the clock and logo layouts, and fullscreen fitting.
-  Node tests it.
+  which edge a fill shows on, stats panels, the panel's pages and
+  fullscreen fitting. Beside it, **`ModelEdges.js`** has limits and
+  budgets, aspect presets and the ruler; **`ModelProfiles.js`** storage
+  keys ([ADR 2](adr/0002-key-settings-by-monitor-description.md)),
+  profiles and automatic profiles; **`ModelArt.js`** the clock and logo
+  layouts. Node tests them.
 - **`Service.qml`** makes two layer surfaces per reserved edge: a
   Bottom-layer spacer whose exclusive zone reserves the edge, and an
   Overlay-layer cap that draws the fill
@@ -45,9 +47,12 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   ([ADR 5](adr/0005-fit-fullscreen-to-the-reachable-area.md)), turns every
   edge black while idle, and answers `omarchy-shell pym.omareach …`.
 - **`Panel.qml`** is the bar widget: the bar button and its card, with
-  the header, monitor buttons, preview, page tabs, idle, ruler and undo,
   the edit functions the pages call and the keyboard shortcuts. Edits go
-  to `ReserveState`. **`PanelPreview.qml`** is the to-scale preview with
+  to `ReserveState`. Its card is **`PanelHeader.qml`** (hero, monitor
+  buttons, preview, page tabs), the page, **`PanelKeys.qml`** (the
+  shortcut sheet) and **`PanelFooter.qml`** (idle, ruler, clear and undo);
+  **`PanelAnchor.qml`** places the card clear of reservations around the
+  bar. **`PanelPreview.qml`** is the to-scale preview with
   its draggable edges, and the pages are **`PanelEdgesPage.qml`** (edge
   sliders and fields, aspect presets), **`PanelFillPage.qml`** (fills, dim,
   the clock's edge), **`PanelStatsPage.qml`** (the dashboard's panels and
@@ -79,16 +84,26 @@ omareach.json ⇄ ReserveState (singleton) ──► Service ──► spacer + 
   other cards keep to stats.sh's pace), `zones.sh` gives the other zones'
   offsets every 5 minutes, and `omarchy-reminder show --json` the
   reminders every 30 s.
-- **`Stats.js`** is the pure data side: parsing frames, counters into
-  rates, history, the theme's palette from `colors.toml` and the text form
-  of numbers. **`StatsViews.js`**, which imports it, is the pure drawing
-  side: how panels tile a strip (`Views.fit`) and the rows each panel shows
-  at a given size. **`Clock.js`** is the Clock panel's data: the ISO week,
+- **`Stats.js`** is the pure data side: frames and `nvidia-smi` lines into
+  one state, counters into rates, history. It imports the parsers:
+  **`StatsProc.js`** (frame sections, CPU, memory, disks, pressure,
+  processes), **`StatsNet.js`** (interfaces, VPNs, meshes),
+  **`StatsSystem.js`** (sensors, names, batteries, player, CPU power) and
+  **`StatsGpu.js`** (NVIDIA, DRM cards, which GPU is which).
+  **`StatsFormat.js`** has the theme's palette from `colors.toml`, heat
+  levels and the text form of numbers. The pure drawing side is
+  **`StatsTiles.js`**, how panels tile a strip (`Tiles.fit`),
+  **`StatsViews.js`**, the rows each panel shows at a given size, and
+  **`StatsRows.js`**, the rows, warning levels and headline fitting the
+  panels share. **`Clock.js`** is the Clock panel's data: the ISO week,
   time zone arithmetic (QML's JavaScript ignores `toLocaleString`'s
-  `timeZone`), the sunrise equation, reminders and tzdata's zone list.
+  `timeZone`), the sunrise equation, reminders and tzdata's zone list;
+  **`StatsClockView.js`** draws it as the Clock card's rows.
 - **`StatsFill.qml`** lays out the grid; **`StatsCard.qml`** draws one
   panel; **`StatsGraph.qml`** the scrolling history graphs;
-  **`StatsEase.qml`** eases meters between samples.
+  **`StatsEase.qml`** eases meters between samples. A card's rows are
+  **`StatsRow.qml`**, its hover tips **`StatsTip.qml`** and the Now playing
+  panel's track **`StatsMedia.qml`**.
 - **`vpn.sh`** asks the clients whose tunnels are up where they go: Proton's
   server and city from its app's cache, `tailscale status --json`,
   `nordvpn status`, `mullvad status`, `piactl get`, `ivpn status`,
@@ -115,8 +130,8 @@ theme's `colors.toml`.
 
 ## Tests
 
-`npm test` runs the Node tests in `tests/`: `model.test.js` (Model.js),
-`stats.test.js` and `sampler.test.js` (Stats.js, StatsViews.js and stats.sh frames),
+`npm test` runs the Node tests in `tests/`: a `model*.test.js` per model script,
+a `stats*.test.js` per stats script, `sampler.test.js` (stats.sh frames),
 `clock.test.js` (Clock.js and zones.sh), `vpn.test.js` (vpn.sh against fake clients) and
 `cpupower.test.js` (cpu-power.sh against a fake sysfs). GitHub Actions runs
 the same on every push. UI is checked in an offscreen harness, never on the

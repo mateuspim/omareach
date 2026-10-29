@@ -3,6 +3,7 @@ import qs.Ui
 import qs.Commons
 import qs.Commons as Commons
 import "Model.js" as Model
+import "ModelEdges.js" as Edges
 
 // The panel's Edges page: a slider and a pixel field for each edge, and
 // the aspect presets with where they put the reachable area.
@@ -31,9 +32,9 @@ Column {
     // The area button names its place ("Area · Bottom"), so it takes about
     // a third of the row and the presets share the rest.
     readonly property real alignWidth: Math.round(width * 0.32)
-    readonly property real buttonWidth: (width - alignWidth - spacing * Model.ASPECTS.length) / Model.ASPECTS.length
+    readonly property real buttonWidth: (width - alignWidth - spacing * Edges.ASPECTS.length) / Edges.ASPECTS.length
     Repeater {
-      model: Model.ASPECTS
+      model: Edges.ASPECTS
       Button {
         required property string modelData
         width: aspectRow.buttonWidth
@@ -52,7 +53,7 @@ Column {
       id: areaButton
       width: aspectRow.alignWidth
       // "Bottom" alone read as "reserve the bottom".
-      text: "Area · " + Model.alignName(page.panel.align, page.panel.screenWidth, page.panel.screenHeight)
+      text: "Area · " + Edges.alignName(page.panel.align, page.panel.screenWidth, page.panel.screenHeight)
       iconText: page.panel.alignIcon(page.panel.align)
       tooltipText: "Where a preset puts the reachable area; the other edge of the pair gets the rest"
       bordered: true

@@ -3,6 +3,7 @@ import qs.Commons
 import qs.Commons as Commons
 import "." as Reserve
 import "Model.js" as Model
+import "ModelEdges.js" as Edges
 
 // The selected monitor to scale: black reserved edges, the reachable area,
 // where the bar will sit, and a draggable handle on every edge.
@@ -170,14 +171,14 @@ Item {
       if (!pressed) return
       var point = mapToItem(monitor, mouse.x, mouse.y)
       var grid = mouse.modifiers & Qt.ControlModifier ? 1 : 10
-      view.panel.setEdge(modelData, Model.fromDrag(modelData, startValue, point.x - startPoint.x, point.y - startPoint.y, view.ratio, grid, view.panel.limit(modelData)))
+      view.panel.setEdge(modelData, Edges.fromDrag(modelData, startValue, point.x - startPoint.x, point.y - startPoint.y, view.ratio, grid, view.panel.limit(modelData)))
     }
     onReleased: { view.panel.reserve.hold(false); view.panel.refocus() }
     onCanceled: view.panel.reserve.hold(false)
     onWheel: function(wheel) {
       view.panel.cursor = index
       wheelRest += wheel.angleDelta.y
-      var steps = Model.notches(wheelRest)
+      var steps = Edges.notches(wheelRest)
       if (!steps) return
       wheelRest -= steps * 120
       // Scrolling down moves the boundary down or right.

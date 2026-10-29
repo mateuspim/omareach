@@ -1,9 +1,10 @@
 # Stats sampler output
 
 `stats.sh` feeds the stats fill. `StatsSampler.qml` runs it, splits its
-stdout on `@end\n`, and hands each frame to `Stats.parseFrame` and
-`Stats.ingest`. This page is the format between them, taken from
-`stats.sh` and `Stats.js`. The design is in
+stdout on `@end\n`, and hands each frame to `Stats.step`, which
+splits it with `StatsProc.js`'s `parseFrame` and ingests it. This page is
+the format between them, taken from `stats.sh` and the `Stats*.js`
+parsers. The design is in
 [ADR 6](../adr/0006-one-builtin-only-stats-sampler.md).
 
 ## Invocation
@@ -45,7 +46,7 @@ cpu0 …
 @end
 ```
 
-`Stats.parseFrame` returns `{ time, <section>: [lines] }`. A section that
+`parseFrame` returns `{ time, <section>: [lines] }`. A section that
 is present but empty is `[]`; one not printed this frame is `undefined`,
 which `Stats.ingest` reads as "keep the last value".
 

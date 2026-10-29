@@ -6,6 +6,8 @@ import qs.Commons
 import qs.Commons as Commons
 import "." as Reserve
 import "Model.js" as Model
+import "ModelEdges.js" as Edges
+import "ModelProfiles.js" as Profiles
 
 // Bar button plus popout for editing reserved display edges. Edits go
 // straight into ReserveState, so the caps, the bar and tiled windows move
@@ -67,21 +69,12 @@ Panel {
   // it restores.
   property var undo: null
   readonly property bool canUndo: undo !== null && (undo.output === undefined || undo.output === output)
-  readonly property var profileNames: Model.profileNames(reserve.profiles)
+  readonly property var profileNames: Profiles.profileNames(reserve.profiles)
   property bool showKeys: false
-  // What a key just did, for a few seconds in the footer: a key acts on
-  // things away from the cursor (F, I, a profile), and nothing else said
-  // what happened or that U takes it back.
-  property string toast: ""
-  function say(text) {
-    toast = text + (canUndo ? "  ·  U to undo" : "")
-    toastTimer.restart()
-  }
-  Timer {
-    id: toastTimer
-    interval: 3000
-    onTriggered: root.toast = ""
-  }
+  // What a key just did, for a few seconds in the footer (PanelToast).
+  readonly property string toast: toaster.text
+  function say(text) { toaster.say(text + (canUndo ? "  ·  U to undo" : "")) }
+  Reserve.PanelToast { id: toaster }
   // The page showing below the preview. It is kept while the shell runs,
   // so the panel opens where it was left.
   property string page: Model.PAGES[0]
@@ -98,8 +91,8 @@ Panel {
   readonly property real screenWidth: outputScreen ? outputScreen.width : 0
   readonly property real screenHeight: outputScreen ? outputScreen.height : 0
   property string pickedAlign: ""
-  readonly property string align: pickedAlign || Model.inferAlign(edge, screenWidth, screenHeight)
-  readonly property string aspect: edge.enabled ? Model.matchingAspect(edge, screenWidth, screenHeight, align) : ""
+  readonly property string align: pickedAlign || Edges.inferAlign(edge, screenWidth, screenHeight)
+  readonly property string aspect: edge.enabled ? Edges.matchingAspect(edge, screenWidth, screenHeight, align) : ""
 
   // Keyboard cursor over the four edge rows.
   property int cursor: 0
@@ -121,71 +114,13 @@ Panel {
   implicitWidth: button.implicitWidth
   implicitHeight: button.implicitHeight
 
-  // --- popout placement ------------------------------------------------------
-  //
-  // KeyboardPanel assumes the bar touches the screen edge. A reservation on
-  // the bar's side pushes the bar inwards, so `gap` grows by that amount and
-  // the card opens beside the bar, not inside the black cap. Reservations
-  // on the two edges beside the bar shift the bar along its length and can
-  // hide the card's ends, which `popupAnchor` corrects.
   readonly property bool barHorizontal: barPosition === "top" || barPosition === "bottom"
-  // Placement follows the bar's own monitor, not the one picked in the panel,
-  // and the applied reservation, which is where the bar really is. It holds
-  // still during a drag, so the card cannot slide under the pointer.
-  readonly property var barEdge: fitted(reserve.appliedEdges(barOutput), barWindow ? barWindow.screen : null)
-  readonly property int barSideReserve: barEdge[barPosition] || 0
-
-  TransformWatcher {
-    id: barWatcher
-    a: root.barWindow ? root.barWindow.contentItem : null
-    b: root
-  }
-  readonly property point barPos: {
-    barWatcher.transform  // reactive dependency, as in KeyboardPanel
-    return barWindow ? root.mapToItem(barWindow.contentItem, 0, 0) : Qt.point(0, 0)
-  }
-
-  // KeyboardPanel centers the card on its anchor in bar coordinates and only
-  // keeps it `margin` from the screen edges. This invisible stand-in for the
-  // button is offset so that the card lands centered on the button's real
-  // screen position and clear of both side caps.
-  Item {
+  // Where the card opens, clear of the reservations around the bar.
+  Reserve.PanelAnchor {
     id: popupAnchor
-    width: button.width
-    height: button.height
-    readonly property real offset: {
-      var before = root.barHorizontal ? root.barEdge.left : root.barEdge.top
-      var after = root.barHorizontal ? root.barEdge.right : root.barEdge.bottom
-      var along = root.barHorizontal ? root.barPos.x : root.barPos.y
-      var size = root.barHorizontal ? button.width : button.height
-      var card = root.barHorizontal ? popup.contentWidth : popup.contentHeight
-      var screen = root.barWindow && root.barWindow.screen
-        ? (root.barHorizontal ? root.barWindow.screen.width : root.barWindow.screen.height) : 0
-      if (!(screen > 0)) return 0
-      var start = along + before + size / 2 - card / 2
-      var wanted = Math.max(before + popup.margin, Math.min(start, screen - after - card - popup.margin))
-      return wanted - (along + size / 2 - card / 2)
-    }
-    x: root.barHorizontal ? offset : 0
-    y: root.barHorizontal ? 0 : offset
-  }
-
-  // The bar as KeyboardPanel sees it. KeyboardPanel matches clicks against
-  // bar buttons as if the bar started at the screen's top-left corner (or
-  // its bottom or right edge for such bars). A reservation on the bar's side
-  // pushes the bar inwards, and one on its leading edge (left of a
-  // horizontal bar, top of a vertical one) shifts it along; either way a
-  // click would press the wrong button, or one from inside the cap. Hide
-  // the buttons from it then: a click on the bar just closes the card.
-  readonly property bool barShifted: barSideReserve > 0 || (barHorizontal ? barEdge.left : barEdge.top) > 0
-  property QtObject popupBar: QtObject {
-    readonly property string position: root.barPosition
-    readonly property int barSize: root.bar ? root.bar.barSize : 0
-    readonly property var activePopout: root.bar ? root.bar.activePopout : null
-    readonly property var clickTargets: root.barShifted || !root.bar ? [] : root.bar.clickTargets
-    function requestPopout(owner) { if (root.bar) root.bar.requestPopout(owner) }
-    function releasePopout(owner) { if (root.bar) root.bar.releasePopout(owner) }
-    function targetBelongsToWindow(target, window) { return root.bar ? root.bar.targetBelongsToWindow(target, window) : false }
+    panel: root
+    barButton: button
+    popupCard: popup
   }
 
   // Notices the CPU power terminal's change while the panel is open.
@@ -204,7 +139,7 @@ Panel {
     pickedAlign = ""
     undo = null
     showKeys = false
-    toast = ""
+    toaster.clear()
     pageCursor = -1
     // The profile on screen, ready to update or tie to these monitors; a
     // placeholder of its name looked typed but left Save and Auto off.
@@ -223,17 +158,17 @@ Panel {
   }
 
   function fitted(entry, screen) {
-    return screen ? Model.fit(entry, screen.width, screen.height) : entry
+    return screen ? Edges.fit(entry, screen.width, screen.height) : entry
   }
   function limit(side) {
-    return Model.limit(side, outputScreen ? outputScreen.width : 0, outputScreen ? outputScreen.height : 0, edge[Model.opposite(side)])
+    return Edges.limit(side, outputScreen ? outputScreen.width : 0, outputScreen ? outputScreen.height : 0, edge[Model.opposite(side)])
   }
   function setEdge(side, pixels) {
     var value = Model.clamp(Model.pixels(pixels), 0, limit(side))
     if (value !== edge[side]) undo = null
     reserve.setEdge(output, side, value)
   }
-  function nudge(side, delta) { setEdge(side, Model.nudge(edge[side], delta, limit(side))) }
+  function nudge(side, delta) { setEdge(side, Edges.nudge(edge[side], delta, limit(side))) }
   function toggleEnabled(name) {
     if (!reserve.isReserved(name)) return
     undo = null
@@ -274,7 +209,7 @@ Panel {
     name = reserve.applyProfile(name)
     if (!name) return
     profileDraft = name
-    if (Model.sameOutputs(before, reserve.outputs)) return
+    if (Profiles.sameOutputs(before, reserve.outputs)) return
     undo = { outputs: before, text: "Restore every monitor as before " + name + (from ? ", " + from : "") }
   }
   function applyProfileAt(index) { if (index < profileNames.length) applyProfile(profileNames[index]) }
@@ -286,7 +221,7 @@ Panel {
     var entries = reserve.profiles[name]
     var auto = reserve.autoProfiles[name]
     if (!reserve.deleteProfile(name)) return
-    if (Model.profileName(profileDraft) === name) profileDraft = ""
+    if (Profiles.profileName(profileDraft) === name) profileDraft = ""
     undo = { profile: name, entries: entries, auto: auto, text: "Restore the profile " + name }
   }
   function setFill(fill) {
@@ -300,7 +235,7 @@ Panel {
     var before = reserve.outputs
     var settings = { fill: fill, dim: edge.dim, clockEdge: edge.clockEdge, clockHours: edge.clockHours, clockDate: edge.clockDate, clockSeconds: edge.clockSeconds, panels: edge.panels }
     screenNames.forEach(function(name) { reserve.update(name, settings) })
-    if (!Model.sameOutputs(before, reserve.outputs))
+    if (!Profiles.sameOutputs(before, reserve.outputs))
       undo = { outputs: before, text: "Restore each monitor's own fill" }
   }
   function setDim(percent) {
@@ -318,14 +253,8 @@ Panel {
     undo = null
     reserve.setClockHours(output, hours)
   }
-  function toggleClockDate() {
-    undo = null
-    reserve.setClockDate(output, !edge.clockDate)
-  }
-  function cycleClockSeconds() {
-    undo = null
-    reserve.setClockSeconds(output, Model.nextClockSeconds(edge.clockSeconds))
-  }
+  function toggleClockDate() { undo = null; reserve.setClockDate(output, !edge.clockDate) }
+  function cycleClockSeconds() { undo = null; reserve.setClockSeconds(output, Model.nextClockSeconds(edge.clockSeconds)) }
   // Hiding a panel throws away its place in the order, so it can be
   // undone; showing one cannot lose anything.
   function togglePanel(panel) {
@@ -334,30 +263,27 @@ Panel {
     reserve.togglePanel(output, panel)
     undo = hiding ? { output: output, entry: saved.entry, text: "Show " + Model.panelName(panel).toLowerCase() + " again" } : null
   }
-  function movePanel(panel, delta) {
-    undo = null
-    reserve.movePanel(output, panel, delta)
-  }
+  function movePanel(panel, delta) { undo = null; reserve.movePanel(output, panel, delta) }
   // Gives every connected monitor this monitor's choice for `panel`,
   // flipped; one undo puts them all back.
   function togglePanelEverywhere(panel) {
     var before = reserve.outputs
     var on = edge.panels.indexOf(panel) === -1
     screenNames.forEach(function(name) { reserve.togglePanel(name, panel, on) })
-    if (!Model.sameOutputs(before, reserve.outputs))
+    if (!Profiles.sameOutputs(before, reserve.outputs))
       undo = { outputs: before, text: "Restore each monitor's own stats panels" }
   }
   // Replaces every edge, so it can be undone like Clear.
   function applyAspect(ratio) {
     if (!outputScreen) return
     var saved = outputUndo()
-    reserve.setAspect(output, screenWidth, screenHeight, Model.parseAspect(ratio), align)
+    reserve.setAspect(output, screenWidth, screenHeight, Edges.parseAspect(ratio), align)
     undo = Model.same(saved.entry, reserve.edges(output)) ? undo : saved
   }
   // Moves the reachable area along, and with it a preset that is in use.
   function cycleAlign() {
     var current = aspect
-    pickedAlign = Model.nextAlign(align)
+    pickedAlign = Edges.nextAlign(align)
     if (current) applyAspect(current)
   }
   function toggleRuler() { reserve.toggleRuler(output) }
@@ -492,14 +418,14 @@ Panel {
     id: popup
     anchorItem: popupAnchor
     owner: root
-    bar: root.popupBar
+    bar: popupAnchor.popupBar
     open: root.opened
     focusTarget: keySurface
     // Wide enough for four fill and panel buttons a row, "Wallpaper" and
     // "Processes" included.
     contentWidth: fittedContentWidth(Style.space(430))
     contentHeight: fittedContentHeight(content.implicitHeight)
-    gap: Style.gapsOut + root.barSideReserve
+    gap: Style.gapsOut + popupAnchor.barSideReserve
 
     Item {
       id: keySurface
@@ -525,94 +451,9 @@ Panel {
           width: popup.contentWidth - popup.padding * 2
           spacing: Style.spacing.lg
 
-          PanelHero {
-            width: parent.width
-            title: "OmaReach"
-            meta: (root.reserve.currentProfile ? root.reserve.currentProfile + "  ·  " : "") + Model.shortSummary(root.edge)
-            foreground: root.foreground
-            fontFamily: root.fontFamily
-            iconComponent: Component {
-              Reserve.ReserveIcon {
-                iconSize: Style.font.display * 1.25
-                color: root.reserve.isActive(root.output) ? Commons.Color.accent : root.foreground
-                reserved: root.reserved
-                paused: root.reserved && !root.edge.enabled
-              }
-            }
-            // The switch says what it does: it pauses the reservation.
-            trailingControl: Component {
-              Row {
-                spacing: Style.spacing.sm
-                opacity: root.reserved ? 1 : 0.4
-                Text {
-                  textFormat: Text.PlainText
-                  anchors.verticalCenter: parent.verticalCenter
-                  text: !root.reserved ? "Nothing reserved" : root.edge.enabled ? "On" : "Paused"
-                  color: root.subtle
-                  font.family: root.fontFamily
-                  font.pixelSize: Style.font.caption
-                }
-                ToggleSwitch {
-                  anchors.verticalCenter: parent.verticalCenter
-                  checked: root.reserve.isActive(root.output)
-                  interactive: root.reserved
-                  foreground: root.foreground
-                  onToggled: { root.toggleEnabled(root.output); keySurface.forceActiveFocus() }
-                }
-              }
-            }
-          }
-
-          // Equal-width monitor buttons. Every button carries an icon so they
-          // share one height; as on the bar, a crossed-out monitor is paused.
-          Row {
-            id: monitorRow
-            visible: root.screenNames.length > 1
-            width: parent.width
-            spacing: Style.spacing.md
-            Repeater {
-              model: root.screenNames
-              Button {
-                required property string modelData
-                width: (monitorRow.width - monitorRow.spacing * (root.screenNames.length - 1)) / root.screenNames.length
-                text: modelData
-                iconText: root.reserve.isReserved(modelData) && !root.reserve.edges(modelData).enabled ? "󰶐" : "󰍹"
-                tooltipText: modelData + "  ·  " + Model.summary(root.reserve.edges(modelData))
-                selected: modelData === root.output
-                bordered: true
-                foreground: root.foreground
-                fontFamily: root.fontFamily
-                onClicked: { root.pickedOutput = modelData; keySurface.forceActiveFocus() }
-              }
-            }
-          }
-
-          Reserve.PanelPreview {
+          Reserve.PanelHeader {
             panel: root
             width: parent.width
-            height: Style.space(200)
-          }
-
-          // One page at a time below the preview, which stays in view on
-          // every page so each edit shows where it lands.
-          Row {
-            id: pageRow
-            width: parent.width
-            spacing: Style.spacing.md
-            Repeater {
-              model: Model.PAGES
-              Button {
-                required property string modelData
-                width: (pageRow.width - pageRow.spacing * (Model.PAGES.length - 1)) / Model.PAGES.length
-                text: Model.PAGE_NAMES[modelData]
-                horizontalPadding: Style.spacing.sm
-                tooltipText: Model.PAGE_NAMES[modelData] + "  ·  [ and ] switch pages"
-                selected: root.page === modelData
-                foreground: root.foreground
-                fontFamily: root.fontFamily
-                onClicked: { root.page = modelData; keySurface.forceActiveFocus() }
-              }
-            }
           }
 
           Reserve.PanelEdgesPage {
@@ -639,114 +480,14 @@ Panel {
             width: parent.width
           }
 
-          // Shortcut sheet, toggled with ?.
-          Grid {
-            visible: root.showKeys
+          Reserve.PanelKeys {
+            panel: root
             width: parent.width
-            columns: 2
-            columnSpacing: Style.spacing.lg
-            rowSpacing: Style.spacing.xs
-            Repeater {
-              model: [
-                "[ / ]", "Previous / next page",
-                "J / K", "Edges: select edge  ·  other pages: move the cursor",
-                "H / L", "Edges: shrink / grow 10 px  ·  ⇧ 100  ·  Ctrl 1",
-                "0", "Zero edge (brings up Edges)",
-                "⌫ / Del", "Edges: zero edge  ·  other pages: as X",
-                "Enter", "Press the button under the cursor  ·  ⇧ right-click it",
-                "X", "Hide a stats panel, delete a profile",
-                "⇧ J / K", "Move a stats panel earlier / later",
-                "U / Ctrl Z", "Undo a clear, zero, preset, profile change or hidden panel",
-                "Space / P", "Pause monitor",
-                "F", "Next fill",
-                "C", "Clock or stats on the largest edge / top or bottom",
-                "A", "Move the reachable area of an aspect preset",
-                "R", "Ruler on the monitor",
-                "I", "Black when idle: off, 30 s, 1 min, 5 min",
-                "1 – 9", "Apply a profile",
-                "S", "Name a profile to save",
-                "Tab / ⇧ Tab", "Next / previous monitor",
-                "Drag", "Move an edge in the preview  ·  Ctrl 1 px",
-                "Scroll", "Move an edge 10 px  ·  ⇧ 100",
-                "?", "Show or hide these shortcuts",
-              "Esc / Q", "Close"
-              ]
-              Text {
-                required property string modelData
-                required property int index
-                textFormat: Text.PlainText
-                text: modelData
-                color: index % 2 === 0 ? root.foreground : root.subtle
-                font.family: root.fontFamily
-                font.pixelSize: Style.font.caption
-                font.bold: index % 2 === 0
-              }
-            }
           }
 
-          Item {
+          Reserve.PanelFooter {
+            panel: root
             width: parent.width
-            height: clearButton.implicitHeight
-            Text {
-              textFormat: Text.PlainText
-              anchors.left: parent.left
-              anchors.right: idleButton.left
-              anchors.rightMargin: Style.spacing.md
-              anchors.verticalCenter: parent.verticalCenter
-              // What a key just did, then the hint again.
-              text: root.toast || (root.showKeys ? "? hide shortcuts" : "? shortcuts")
-              color: root.toast ? root.foreground : root.subtle
-              elide: Text.ElideRight
-              font.family: root.fontFamily
-              font.pixelSize: Style.font.caption
-            }
-            // Session-wide, unlike everything above it.
-            Button {
-              id: idleButton
-              anchors.right: rulerButton.left
-              anchors.rightMargin: Style.spacing.md
-              text: "Idle  ·  " + Model.idleName(root.reserve.idleBlack)
-              iconText: "󰒲"
-              selected: root.reserve.idleBlack > 0
-              bordered: true
-              foreground: root.foreground
-              fontFamily: root.fontFamily
-              tooltipText: root.reserve.idleBlack > 0
-                ? "Every edge on every monitor goes black after " + Model.idleName(root.reserve.idleBlack) + " without input"
-                : "Black when idle: off. Click to black out every edge after a while without input"
-              onClicked: { root.cycleIdle(); keySurface.forceActiveFocus() }
-            }
-            Button {
-              id: rulerButton
-              anchors.right: clearButton.left
-              anchors.rightMargin: Style.spacing.md
-              text: "Ruler"
-              iconText: "󰑭"
-              selected: root.reserve.ruler === root.output
-              bordered: true
-              foreground: root.foreground
-              fontFamily: root.fontFamily
-              tooltipText: "Show a ruler on " + root.output + " to read how much of each edge is hidden"
-              onClicked: { root.toggleRuler(); keySurface.forceActiveFocus() }
-            }
-            Button {
-              id: clearButton
-              anchors.right: parent.right
-              // Turns into Undo right after it (or a zeroed edge) discards values.
-              text: root.canUndo ? "Undo" : "Clear"
-              iconText: root.canUndo ? "󰕌" : "󰅖"
-              enabled: root.canUndo || root.reserved
-              opacity: enabled ? 1 : 0.4
-              bordered: true
-              foreground: root.foreground
-              fontFamily: root.fontFamily
-              tooltipText: root.canUndo ? root.undo.text : "Remove every reserved edge on " + root.output
-              onClicked: {
-                if (root.canUndo) root.undoLast()
-                else root.clearOutput()
-                keySurface.forceActiveFocus()
-              }
-            }
           }
         }
       }

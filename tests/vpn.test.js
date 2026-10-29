@@ -7,10 +7,10 @@ import { load } from "./qmljs.js"
 
 // vpn.sh end to end, against made-up clients on PATH: each prints what its
 // docs or source say it prints, so a change to how vpn.sh asks a client,
-// or to how Stats.parseVpnInfo reads it, shows up here. Only Proton and
+// or to how Net.parseVpnInfo reads it, shows up here. Only Proton and
 // Tailscale were tried against real clients; NordVPN, Mullvad, PIA,
 // IVPN, Windscribe and ExpressVPN are covered only by these.
-const Stats = load("Stats.js")
+const Net = load("StatsNet.js")
 const plain = value => JSON.parse(JSON.stringify(value))
 const script = new URL("../vpn.sh", import.meta.url).pathname
 const root = mkdtempSync(join(tmpdir(), "vpn-"))
@@ -41,7 +41,7 @@ const run = (...clients) => {
   const env = { PATH: bin + ":" + tools, HOME: join(root, "home"), STATS_PROTON_CACHE: join(root, "none") }
   const result = spawnSync(bash, [script, ...clients], { encoding: "utf8", env })
   assert.equal(result.status, 0, result.stderr)
-  return Stats.parseVpnInfo(result.stdout)
+  return Net.parseVpnInfo(result.stdout)
 }
 
 const tests = {

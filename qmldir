@@ -4,6 +4,10 @@ Ruler 1.0 Ruler.qml
 StatsSampler 1.0 StatsSampler.qml
 StatsFill 1.0 StatsFill.qml
 StatsCard 1.0 StatsCard.qml
+StatsRow 1.0 StatsRow.qml
+StatsTip 1.0 StatsTip.qml
+StatsMedia 1.0 StatsMedia.qml
+StatsDigits 1.0 StatsDigits.qml
 StatsGraph 1.0 StatsGraph.qml
 StatsEase 1.0 StatsEase.qml
 ReserveIcon 1.0 ReserveIcon.qml
@@ -11,4 +15,10 @@ PanelPreview 1.0 PanelPreview.qml
 PanelEdgesPage 1.0 PanelEdgesPage.qml
 PanelFillPage 1.0 PanelFillPage.qml
 PanelStatsPage 1.0 PanelStatsPage.qml
+PanelZoneRow 1.0 PanelZoneRow.qml
 PanelProfilesPage 1.0 PanelProfilesPage.qml
+PanelAnchor 1.0 PanelAnchor.qml
+PanelHeader 1.0 PanelHeader.qml
+PanelKeys 1.0 PanelKeys.qml
+PanelFooter 1.0 PanelFooter.qml
+PanelToast 1.0 PanelToast.qml

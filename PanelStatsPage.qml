@@ -3,6 +3,7 @@ import Quickshell.Io
 import qs.Ui
 import qs.Commons
 import "Model.js" as Model
+import "StatsTiles.js" as Tiles
 import "StatsViews.js" as Views
 import "Clock.js" as Clock
 
@@ -19,7 +20,7 @@ Column {
   // fit the strip are left off from the end.
   readonly property var samples: panel.reserve.stats.data
   readonly property var strip: Model.statsStrip(panel.edge, panel.screenWidth, panel.screenHeight)
-  readonly property var dropped: strip ? Views.fit(Views.availablePanels(shown, samples), strip.width, strip.height).dropped : []
+  readonly property var dropped: strip ? Tiles.fit(Views.availablePanels(shown, samples), strip.width, strip.height).dropped : []
   readonly property var hidden: Model.panelOrder(shown).slice(shown.length).filter(function(p) { return Views.available(p, page.samples) })
   readonly property int possible: Model.STATS_PANELS.filter(function(p) { return Views.available(p, page.samples) }).length
   // Counted like `possible`: a panel this machine has no use for is chosen
@@ -145,7 +146,7 @@ Column {
     else if (index === meshAt - 1 && cpuPowerShown) changeCpuPower()
     else if (index === meshAt) toggleMeshAddress()
     else if (clockShown && index >= zonesAt && index < zonesAt + zones.length) removeZone(zones[index - zonesAt])
-    else if (clockShown && canAddZone && index === sunAt - 1) zoneDropdown.open()
+    else if (clockShown && canAddZone && index === sunAt - 1) zoneRow.openList()
     else if (clockShown && index === sunAt) toggleSun()
   }
   // Returns where the cursor goes: onto the panel that took the hidden
@@ -438,49 +439,12 @@ Column {
     foreground: page.panel.foreground
     fontFamily: page.panel.fontFamily
   }
-  // Up to three other zones, a button each (click to take it off), and
-  // the list to add one from.
-  Row {
+  PanelZoneRow {
     id: zoneRow
     visible: page.clockShown
     width: parent.width
-    spacing: Style.spacing.md
-    readonly property int cells: page.zones.length + (page.canAddZone ? 1 : 0)
-    readonly property real cellWidth: (width - spacing * (cells - 1)) / Math.max(1, cells)
-    Repeater {
-      model: page.clockShown ? page.zones : []
-      Button {
-        required property string modelData
-        required property int index
-        width: zoneRow.cellWidth
-        text: Clock.zoneCity(modelData)
-        iconText: "󰥔"
-        horizontalPadding: Style.spacing.sm
-        hasCursor: page.cursorOn(page.zonesAt + index)
-        bordered: true
-        foreground: page.panel.foreground
-        fontFamily: page.panel.fontFamily
-        tooltipText: modelData + "\nClick to take it off the Clock panel  ·  X"
-        onClicked: { page.removeZone(modelData); page.panel.refocus() }
-      }
-    }
-    SearchableDropdown {
-      id: zoneDropdown
-      visible: page.canAddZone
-      width: zoneRow.cellWidth
-      showLabel: false
-      rowHeight: Math.round(sunButton.implicitHeight)
-      value: ""
-      triggerLabel: "Add zone"
-      placeholderText: "City or region..."
-      options: page.zoneTab.filter(function(z) { return page.zones.indexOf(z.zone) === -1 })
-        .map(function(z) { return { value: z.zone, label: z.city, description: z.zone } })
-      hasCursor: page.cursorOn(page.sunAt - 1)
-      foreground: page.panel.foreground
-      fontFamily: page.panel.fontFamily
-      onChanged: function(value) { page.addZone(value) }
-      onPopupOpenChanged: if (!popupOpen) page.panel.refocus()
-    }
+    stats: page
+    rowHeight: Math.round(sunButton.implicitHeight)
   }
   Button {
     id: sunButton

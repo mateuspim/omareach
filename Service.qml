@@ -6,6 +6,8 @@ import Quickshell.Wayland
 import "." as Reserve
 import "Model.js" as Model
 import "Clock.js" as Clock
+import "ModelEdges.js" as Edges
+import "ModelProfiles.js" as Profiles
 
 // Every reserved edge gets two layer surfaces:
 //
@@ -30,7 +32,7 @@ Scope {
       required property var modelData
       // Fitted here as well as in the panel: hand edits and mode changes
       // never go through the panel's limits.
-      readonly property var edge: Model.fit(Reserve.ReserveState.appliedEdges(modelData.name), modelData.width, modelData.height)
+      readonly property var edge: Edges.fit(Reserve.ReserveState.appliedEdges(modelData.name), modelData.width, modelData.height)
       // A fullscreen window (a video, a game) gets plain black beside it
       // rather than a bright logo or wallpaper; only the stats dashboard
       // stays, as a game is when it is most useful.
@@ -128,7 +130,7 @@ Scope {
   }
 
   function noProfile(name) {
-    var names = Model.profileNames(root.state.profiles)
+    var names = Profiles.profileNames(root.state.profiles)
     return "No profile named " + name + (names.length ? "; one of " + names.join(", ") : "; none saved yet")
   }
 
@@ -159,7 +161,7 @@ Scope {
       var result = {
         idleBlack: root.state.idleBlack, idle: root.idle, statsPace: root.state.statsPace, statsTunnelAddress: root.state.statsTunnelAddress,
         statsZones: root.state.statsZones, statsLocation: root.state.statsLocation, ruler: root.state.ruler,
-        profile: root.state.currentProfile, profiles: Model.profileNames(root.state.profiles),
+        profile: root.state.currentProfile, profiles: Profiles.profileNames(root.state.profiles),
         autoProfiles: root.state.autoProfiles, monitors: root.state.connected, outputs: {}
       }
       root.outputsFor("all").forEach(function(name) { result.outputs[name] = root.state.edges(name) })
@@ -251,17 +253,17 @@ Scope {
       return root.each(output, function(name) {
         var screen = root.screenFor(name)
         var entry = root.state.edges(name)
-        root.state.setEdge(name, side, Model.clamp(pixels, 0, Model.limit(side, screen.width, screen.height, entry[Model.opposite(side)])))
+        root.state.setEdge(name, side, Model.clamp(pixels, 0, Edges.limit(side, screen.width, screen.height, entry[Model.opposite(side)])))
       })
     }
     function aspect(output: string, ratio: string, align: string): string {
-      var value = Model.parseAspect(ratio)
+      var value = Edges.parseAspect(ratio)
       if (!value) return "Unknown aspect " + ratio + "; for example 16:9"
-      if (align && !Model.alignment(align)) return "Unknown alignment " + align + "; top, left, center, bottom or right"
+      if (align && !Edges.alignment(align)) return "Unknown alignment " + align + "; top, left, center, bottom or right"
       return root.each(output, function(name) {
         var screen = root.screenFor(name)
         root.state.setAspect(name, screen.width, screen.height, value,
-          Model.alignment(align) || Model.inferAlign(root.state.edges(name), screen.width, screen.height))
+          Edges.alignment(align) || Edges.inferAlign(root.state.edges(name), screen.width, screen.height))
       })
     }
     function ruler(output: string): string {
@@ -292,7 +294,7 @@ Scope {
     }
     // One name per line, the one on screen marked.
     function profiles(): string {
-      var names = Model.profileNames(root.state.profiles)
+      var names = Profiles.profileNames(root.state.profiles)
       if (!names.length) return "No profiles"
       return names.map(function(name) {
         var auto = root.state.autoProfiles[name]

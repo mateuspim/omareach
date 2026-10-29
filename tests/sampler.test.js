@@ -1,21 +1,18 @@
 import assert from "node:assert/strict"
 import { execFileSync } from "node:child_process"
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
+import { mkdirSync, mkdtempSync, rmSync, symlinkSync, writeFileSync } from "node:fs"
 import { tmpdir } from "node:os"
 import { join } from "node:path"
-import vm from "node:vm"
+import { Net, Proc, Stats } from "./statsfixtures.js"
 
 // Runs the real stats.sh on this machine and reads its frames the way the
 // shell does.
-const source = readFileSync(new URL("../Stats.js", import.meta.url), "utf8").replace(/^\.pragma library\s*/, "")
-const Stats = {}
-vm.runInNewContext(source, Stats)
 const script = new URL("../stats.sh", import.meta.url).pathname
 
 // stats.sh INTERVAL PROCESS_EVERY FRAMES
 const run = (...args) => execFileSync("bash", [script, ...args.map(String)], { encoding: "utf8", timeout: 10000 })
 const runWith = (env, ...args) => execFileSync("bash", [script, ...args.map(String)], { encoding: "utf8", timeout: 10000, env: { ...process.env, ...env } })
-const frames = text => text.split("@end\n").filter(frame => frame.trim()).map(Stats.parseFrame)
+const frames = text => text.split("@end\n").filter(frame => frame.trim()).map(Proc.parseFrame)
 
 const tests = {
   "every frame ends with @end and carries a time"() {
@@ -114,7 +111,7 @@ const tests = {
     try {
       const text = execFileSync("bash", [new URL("../vpn.sh", import.meta.url).pathname, "proton", "unknown"], { encoding: "utf8", env: { ...process.env, STATS_PROTON_CACHE: root } })
       assert.equal(text, "@proton\nserver\tBR#12\ncountry\tBR\ncity\tSao Paulo\nstate\tSao Paulo\n")
-      assert.equal(Stats.parseVpnInfo(text).proton.place, "Sao Paulo, BR")
+      assert.equal(Net.parseVpnInfo(text).proton.place, "Sao Paulo, BR")
       // For a plain tun0 only an OpenVPN connection counts.
       const vpn = new URL("../vpn.sh", import.meta.url).pathname
       // A PATH of only what vpn.sh needs, so no VPN client installed here

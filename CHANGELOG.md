@@ -38,6 +38,10 @@
 
 ### Fixed
 
+- **One battery per peripheral:** a Logitech mouse that the kernel lists
+  twice, through its receiver and over its charging cable, showed on the
+  Battery card twice, once with a stale charge (21% beside 71%). The
+  entry that knows its state now stands for the device.
 - **Rows after a swatch** (the Network card's VPN and mesh rows) ran
   their label into the value on a narrow card ("VPNProton VPN").
 - **The load average** on a half-width wide CPU card was cut to
@@ -48,6 +52,18 @@
 - **Animation is a row of buttons** on the Stats page (Display, 60, 30,
   15, Off): the list ran past the panel's bottom. CPU power and Mesh
   addresses (now labeled **Mesh**) share the row under it.
+
+## 1.11.0 — 2026-10-26
+
+### Changed
+
+- **Smaller files, same plugin:** every script and test is under 500
+  lines. The stats data is split by what it reads (`StatsProc`,
+  `StatsNet`, `StatsSystem`, `StatsGpu`, `StatsFormat`), its drawing into
+  `StatsTiles`, `StatsRows` and `StatsViews`, the model into `ModelEdges`,
+  `ModelProfiles` and `ModelArt`, and the panel and stats cards into
+  smaller components. Nothing you see or set changes.
+- **The panel's pages image** shows the Mesh addresses switch.
 
 ## 1.10.0 — 2026-10-26
 
