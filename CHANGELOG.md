@@ -1,5 +1,14 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+
+- **One battery per peripheral:** a Logitech mouse that the kernel lists
+  twice, through its receiver and over its charging cable, showed on the
+  Battery card twice, once with a stale charge (21% beside 71%). The
+  entry that knows its state now stands for the device.
+
 ## 1.11.0 — 2026-10-26
 
 ### Changed
